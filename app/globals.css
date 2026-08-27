@@ -1,0 +1,119 @@
+:root {
+  --ink: #070707;
+  --paper: #EBCFDA;
+  --mauve: #9C6E82;
+  --coral: #C98A94;
+  --brass: #C7A66B;
+  --text: #EAD9DE;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: Georgia, "Source Serif 4", serif;
+}
+
+a { color: inherit; }
+
+.mono {
+  font-family: "Courier New", monospace;
+  letter-spacing: 0.5px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 40px;
+  box-shadow: 8px 10px 0 rgba(156, 110, 130, 0.3);
+}
+
+.auth-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(7, 7, 7, 0.2);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  color: var(--ink);
+  margin-top: 6px;
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(7, 7, 7, 0.55);
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.role-opt {
+  border: 1.5px solid rgba(7, 7, 7, 0.2);
+  border-radius: 4px;
+  padding: 10px 4px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(7, 7, 7, 0.6);
+  background: none;
+}
+
+.role-opt.selected {
+  border-color: var(--coral);
+  background: rgba(201, 138, 148, 0.15);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+button.submit {
+  width: 100%;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  padding: 14px 0;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 700;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+button.submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.error-text {
+  color: #8B1E3F;
+  font-size: 12.5px;
+  margin-bottom: 12px;
+}
+
+.success-text {
+  color: #2f5d3a;
+  font-size: 12.5px;
+  margin-bottom: 12px;
+}
