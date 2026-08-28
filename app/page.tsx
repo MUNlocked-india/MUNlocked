@@ -56,6 +56,7 @@ export default function Home() {
                 <textPath href="#circlePath" startOffset="2%">SESSION IN PROGRESS • SESSION IN PROGRESS •</textPath>
               </text>
             </svg>
+            <Image src="/logo.png" alt="" width={44} height={40} className="stamp-mark" />
           </div>
 
           <div className="file-code">File No. IN/MUN/2026 — Unclassified</div>

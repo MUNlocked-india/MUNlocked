@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
 const ROLES = [
@@ -46,7 +47,8 @@ export default function SignupPage() {
 
   if (sent) {
     return (
-      <div className="auth-wrap">
+      <div className="auth-wrap" style={{ flexDirection: "column", gap: 22 }}>
+        <Image src="/logo.png" alt="MUNlocked" width={72} height={65} style={{ objectFit: "contain" }} />
         <div className="auth-card" style={{ textAlign: "center" }}>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: 22, marginBottom: 10 }}>
             Check your inbox
@@ -61,7 +63,8 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="auth-wrap">
+    <div className="auth-wrap" style={{ flexDirection: "column", gap: 22 }}>
+      <Image src="/logo.png" alt="MUNlocked" width={72} height={65} style={{ objectFit: "contain" }} priority />
       <form className="auth-card" onSubmit={handleSubmit}>
         <div className="mono" style={{ fontSize: 11, letterSpacing: 2, color: "var(--coral)", marginBottom: 8, textTransform: "uppercase" }}>
           File No. IN/MUN/ACCESS
