@@ -15,11 +15,23 @@ export async function loginAction(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent(error.message)}`);
   }
 
-  // Fire-and-forget-ish: awaited so the request stays server-side and the
-  // Resend API key never reaches the browser, but this shouldn't be relied
-  // on to block navigation if the email provider is slow — Resend requests
-  // are quick, so this stays inline for now rather than adding a queue.
-  await notifyAdmin("Successful login", `${email} just logged in to MUNlocked.`);
+  // Fire-and-forget, deliberately NOT awaited: a slow or failing Resend call
+  // must never be able to block or break the actual login redirect. Errors
+  // are swallowed here on purpose — this is a nice-to-have side effect, not
+  // part of the auth-critical path.
+  notifyAdmin("Successful login", `${email} just logged in to MUNlocked.`).catch(() => {});
 
   redirect("/dashboard");
+}
+
+export async function resendConfirmationAction(formData: FormData) {
+  const email = String(formData.get("email"));
+  const supabase = await createClient();
+
+  const { error } = await supabase.auth.resend({ type: "signup", email });
+
+  if (error) {
+    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+  }
+  redirect(`/login?resent=1`);
 }

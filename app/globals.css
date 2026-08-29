@@ -117,3 +117,9 @@ button.submit:disabled { opacity: 0.6; cursor: not-allowed; }
   font-size: 12.5px;
   margin-bottom: 12px;
 }
+
+@media print {
+  button[aria-label="Open MUNlocked Assistant"] {
+    display: none !important;
+  }
+}

@@ -38,7 +38,10 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/admin") ||
     request.nextUrl.pathname.startsWith("/conferences/submit") ||
     request.nextUrl.pathname.startsWith("/committees") ||
-    request.nextUrl.pathname.startsWith("/hire-eb/apply");
+    request.nextUrl.pathname.startsWith("/hire-eb/apply") ||
+    request.nextUrl.pathname.startsWith("/research/submit") ||
+    /^\/research\/[^/]+$/.test(request.nextUrl.pathname) ||
+    request.nextUrl.pathname.startsWith("/print/research");
   const isAuthRoute =
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/signup");

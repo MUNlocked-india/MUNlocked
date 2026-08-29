@@ -284,3 +284,74 @@ create policy "Only admins can update EB application status"
   with check (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
 
 create index eb_applications_status_idx on public.eb_applications (status);
+
+-- 8. Research Library ----------------------------------------------------------
+create type public.research_status as enum ('pending', 'approved', 'rejected');
+
+create table public.research_papers (
+  id uuid primary key default gen_random_uuid(),
+  submitted_by uuid not null references public.profiles(id) on delete cascade,
+  submitted_by_email text not null,
+  author_name text not null,
+  title text not null,
+  committee text not null,
+  document_type text not null default 'Background Guide',
+  agenda text not null,
+  summary text not null,
+  full_text text not null,
+  status public.research_status not null default 'pending',
+  reviewed_by uuid references public.profiles(id),
+  created_at timestamptz not null default now()
+);
+
+alter table public.research_papers enable row level security;
+
+create policy "Approved research is viewable by everyone signed in"
+  on public.research_papers for select to authenticated
+  using (status = 'approved');
+
+create policy "Submitters can view their own research"
+  on public.research_papers for select to authenticated
+  using (auth.uid() = submitted_by);
+
+create policy "Admins can view all research"
+  on public.research_papers for select to authenticated
+  using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
+
+create policy "Signed-in users can submit research as pending"
+  on public.research_papers for insert to authenticated
+  with check (auth.uid() = submitted_by and status = 'pending');
+
+create policy "Only admins can update research status"
+  on public.research_papers for update to authenticated
+  using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'))
+  with check (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
+
+create index research_papers_status_idx on public.research_papers (status);
+
+-- Upvotes as a separate table (one row per user per paper) rather than a
+-- counter column, so RLS can enforce "one vote per person" and toggling is
+-- just insert/delete rather than a racy increment.
+create table public.research_upvotes (
+  paper_id uuid not null references public.research_papers(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (paper_id, user_id)
+);
+
+alter table public.research_upvotes enable row level security;
+
+create policy "Upvotes are viewable by everyone signed in"
+  on public.research_upvotes for select to authenticated
+  using (true);
+
+create policy "Users can upvote approved research once"
+  on public.research_upvotes for insert to authenticated
+  with check (
+    auth.uid() = user_id
+    and exists (select 1 from public.research_papers where id = paper_id and status = 'approved')
+  );
+
+create policy "Users can remove their own upvote"
+  on public.research_upvotes for delete to authenticated
+  using (auth.uid() = user_id);

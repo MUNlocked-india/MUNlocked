@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import "./landing.css";
-import ChatWidget from "@/components/ChatWidget";
 import { ADMIN_EMAIL } from "@/lib/constants";
 
 export default function Home() {
@@ -151,8 +150,6 @@ export default function Home() {
           {ADMIN_EMAIL}
         </a>
       </footer>
-
-      <ChatWidget />
     </>
   );
 }

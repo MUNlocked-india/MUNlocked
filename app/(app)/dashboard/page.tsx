@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { signOutAction } from "@/lib/actions";
 
 const ROLE_LABEL: Record<string, string> = {
   delegate: "Delegate",
@@ -26,13 +27,6 @@ export default async function DashboardPage() {
     .single();
 
   const isAdmin = profile?.role === "admin";
-
-  async function signOut() {
-    "use server";
-    const supabase = await createClient();
-    await supabase.auth.signOut();
-    redirect("/login");
-  }
 
   return (
     <div style={{ minHeight: "100vh", padding: 48, maxWidth: 720, margin: "0 auto" }}>
@@ -80,11 +74,14 @@ export default async function DashboardPage() {
             <a href="/admin/eb-applications" className="mono" style={{ background: "var(--coral)", color: "var(--ink)", padding: "10px 18px", borderRadius: 3, textDecoration: "none", fontSize: 12, fontWeight: 700, textTransform: "uppercase" }}>
               Review EB Applications
             </a>
+            <a href="/admin/research" className="mono" style={{ background: "var(--coral)", color: "var(--ink)", padding: "10px 18px", borderRadius: 3, textDecoration: "none", fontSize: 12, fontWeight: 700, textTransform: "uppercase" }}>
+              Review Research
+            </a>
           </div>
         </div>
       )}
 
-      <form action={signOut}>
+      <form action={signOutAction}>
         <button type="submit" className="submit" style={{ width: "auto", padding: "12px 22px" }}>
           Sign Out
         </button>
