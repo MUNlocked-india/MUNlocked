@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import "./landing.css";
 import { ADMIN_EMAIL } from "@/lib/constants";
+import SiteHeader from "@/components/SiteHeader";
 
 export default function Home() {
   return (
@@ -19,18 +20,7 @@ export default function Home() {
         <span>STATUS <b>IN SESSION</b></span>
       </div>
 
-      <nav className="lp-nav">
-        <Link href="/" className="lp-logo">
-          <Image src="/logo.png" alt="MUNlocked" width={30} height={26} style={{ objectFit: "contain" }} priority />
-          <div className="lp-logo-text">MUN<span>locked</span></div>
-        </Link>
-        <div className="lp-nav-links">
-          <Link href="/conferences">Conferences</Link>
-          <Link href="/hire-eb">Hire an EB</Link>
-          <Link href="/research">Research</Link>
-          <Link href="/login" className="lp-nav-cta">Sign In</Link>
-        </div>
-      </nav>
+      <SiteHeader />
 
       <section className="hero">
         <div className="hero-left">
