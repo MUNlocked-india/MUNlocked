@@ -60,14 +60,25 @@ export default function ColorBends({ className }: ColorBendsProps) {
       const shader = gl.createShader(type)!;
       gl.shaderSource(shader, source);
       gl.compileShader(shader);
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader) || "Shader compile failed");
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.warn("MUNlocked background shader could not compile:", gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+      }
       return shader;
     };
+    const vertex = compile(gl.VERTEX_SHADER, vertexShader);
+    const fragment = compile(gl.FRAGMENT_SHADER, fragmentShader);
+    if (!vertex || !fragment) return;
     const program = gl.createProgram()!;
-    gl.attachShader(program, compile(gl.VERTEX_SHADER, vertexShader));
-    gl.attachShader(program, compile(gl.FRAGMENT_SHADER, fragmentShader));
+    gl.attachShader(program, vertex);
+    gl.attachShader(program, fragment);
     gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || "Shader link failed");
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      console.warn("MUNlocked background shader could not link:", gl.getProgramInfoLog(program));
+      gl.deleteProgram(program);
+      return;
+    }
     gl.useProgram(program);
     const buffer = gl.createBuffer()!;
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -118,6 +129,8 @@ export default function ColorBends({ className }: ColorBendsProps) {
       window.removeEventListener("pointermove", move);
       gl.deleteBuffer(buffer);
       gl.deleteProgram(program);
+      gl.deleteShader(vertex);
+      gl.deleteShader(fragment);
       container.replaceChildren();
     };
   }, []);
