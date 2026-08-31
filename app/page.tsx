@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import "./landing.css";
+import ColorBends from "@/components/ColorBends";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import SiteHeader from "@/components/SiteHeader";
 import Reveal from "@/components/Reveal";
@@ -37,7 +38,10 @@ export default async function Home() {
         rel="stylesheet"
       />
 
-      <div className="dais-bar">
+      <main className="landing-page">
+      <ColorBends className="color-bends-background" />
+      <div className="landing-content">
+      <div className="dais-bar glass-panel">
         <span>MUNLOCKED</span><span className="dot">•</span>
         <span>UNGA — FIRST COMMITTEE</span><span className="dot">•</span>
         <span>AGENDA ITEM 04</span><span className="dot">•</span>
@@ -47,7 +51,7 @@ export default async function Home() {
       <SiteHeader />
 
       <section className="hero">
-        <div className="hero-left">
+        <div className="hero-left glass-panel">
           <svg className="globe-watermark" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="100" cy="100" r="98" stroke="#EAD9DE" strokeWidth="0.8" />
             <ellipse cx="100" cy="100" rx="98" ry="38" stroke="#EAD9DE" strokeWidth="0.8" />
@@ -80,7 +84,7 @@ export default async function Home() {
             <Link href="/signup" className="btn btn-outline">Join as Delegate</Link>
           </div>
         </div>
-        <div className="hero-right">
+        <div className="hero-right glass-panel">
           <div className="right-eyebrow">Motion Carried</div>
           <div className="right-head">Built to end the guesswork</div>
           <p className="right-body">Biased EBs. Biased conferences. First-timers with no research and no idea what a POI even is. MUNlocked is the fix: EBs hired on a public track record, conferences reviewed before they&apos;re listed, and one shared marksheet the whole dais can see.</p>
@@ -144,7 +148,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="placards-section">
+      <section className="placards-section glass-panel">
         <Reveal>
           <div className="placards-head">Raise to Vote</div>
           <div className="placards-title">Three Motions on the Floor</div>
@@ -231,7 +235,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="rules-section">
+      <section className="rules-section glass-panel">
         <Reveal>
           <div className="rules-head">The Standing Rules</div>
           <div className="rules-title">What MUNlocked Won&apos;t Compromise On</div>
@@ -261,7 +265,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <footer style={{ borderTop: "1px solid rgba(234,217,222,0.08)", padding: "26px 48px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+      <footer className="glass-panel" style={{ borderTop: "1px solid rgba(234,217,222,0.22)", padding: "26px 48px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Image src="/logo.png" alt="MUNlocked" width={24} height={21} style={{ objectFit: "contain", opacity: 0.7 }} />
           <span className="mono" style={{ fontSize: 11, color: "rgba(234,217,222,0.45)" }}>© {new Date().getFullYear()} MUNlocked</span>
@@ -270,6 +274,8 @@ export default async function Home() {
           {ADMIN_EMAIL}
         </a>
       </footer>
+      </div>
+      </main>
     </>
   );
 }
