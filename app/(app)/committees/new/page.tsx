@@ -34,6 +34,22 @@ async function createCommittee(formData: FormData) {
     role: "chair",
   });
 
+  // Seed the default grading columns so the sheet isn't empty on first load.
+  // The chair can rename, remove, or add more from here.
+  const DEFAULT_COLUMNS = [
+    { key: "poi", label: "POI" },
+    { key: "chits", label: "Chits" },
+    { key: "verbal_reply", label: "Verbal Reply" },
+    { key: "gsl", label: "GSL" },
+    { key: "mod", label: "MOD" },
+    { key: "decorum", label: "Decorum" },
+    { key: "research", label: "Research" },
+    { key: "documentation", label: "Documentation" },
+  ];
+  await supabase.from("marksheet_columns").insert(
+    DEFAULT_COLUMNS.map((c, i) => ({ committee_id: data!.id, key: c.key, label: c.label, position: i }))
+  );
+
   redirect(`/committees/${data!.id}`);
 }
 

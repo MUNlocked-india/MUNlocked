@@ -355,3 +355,38 @@ create policy "Users can upvote approved research once"
 create policy "Users can remove their own upvote"
   on public.research_upvotes for delete to authenticated
   using (auth.uid() = user_id);
+
+-- 9. Custom marksheet columns --------------------------------------------------
+-- Lets chairs add/rename/remove scoring columns per committee instead of being
+-- locked to a fixed set. Scores for these columns are stored as a JSONB map
+-- on marks.custom_scores, keyed by this table's `key`.
+create table public.marksheet_columns (
+  id uuid primary key default gen_random_uuid(),
+  committee_id uuid not null references public.committees(id) on delete cascade,
+  key text not null,
+  label text not null,
+  position int not null default 0,
+  created_at timestamptz not null default now(),
+  unique (committee_id, key)
+);
+
+alter table public.marksheet_columns enable row level security;
+
+create policy "Members can view marksheet columns"
+  on public.marksheet_columns for select to authenticated
+  using (public.can_access_committee(committee_id));
+
+create policy "Members can add marksheet columns"
+  on public.marksheet_columns for insert to authenticated
+  with check (public.can_access_committee(committee_id));
+
+create policy "Members can rename marksheet columns"
+  on public.marksheet_columns for update to authenticated
+  using (public.can_access_committee(committee_id))
+  with check (public.can_access_committee(committee_id));
+
+create policy "Members can remove marksheet columns"
+  on public.marksheet_columns for delete to authenticated
+  using (public.can_access_committee(committee_id));
+
+alter table public.marks add column if not exists custom_scores jsonb not null default '{}'::jsonb;

@@ -21,4 +21,8 @@ export const COUNTRY_BUNDLES: Record<string, string[]> = {
     "Malta", "Netherlands", "Poland", "Portugal", "Romania", "Slovakia",
     "Slovenia", "Spain", "Sweden",
   ],
+  "ASEAN": [
+    "Brunei", "Cambodia", "Indonesia", "Laos", "Malaysia", "Myanmar",
+    "Philippines", "Singapore", "Thailand", "Vietnam",
+  ],
 };

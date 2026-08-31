@@ -94,7 +94,7 @@ export default async function ResearchPage({
             const upvoted = userUpvoted.has(p.id);
             const boundToggle = toggleUpvote.bind(null, p.id);
             return (
-              <div key={p.id} style={{ background: "var(--paper)", color: "var(--ink)", borderRadius: 6, padding: 22, boxShadow: "5px 6px 0 rgba(156,110,130,0.25)" }}>
+              <div key={p.id} className="munlocked-card-hover" style={{ background: "var(--paper)", color: "var(--ink)", borderRadius: 14, padding: 22, boxShadow: "5px 6px 0 rgba(156,110,130,0.2)", transition: "transform 0.25s ease, box-shadow 0.25s ease" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                   <span className="mono" style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", background: "rgba(7,7,7,0.08)", padding: "3px 8px", borderRadius: 3 }}>
                     {p.document_type}

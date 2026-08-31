@@ -123,3 +123,23 @@ button.submit:disabled { opacity: 0.6; cursor: not-allowed; }
     display: none !important;
   }
 }
+
+.munlocked-card-hover:hover {
+  transform: translateY(-6px);
+  box-shadow: 9px 12px 0 rgba(156,110,130,0.3) !important;
+}
+
+@keyframes munlocked-reveal {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.munlocked-reveal {
+  animation: munlocked-reveal 0.7s ease forwards;
+}
+.munlocked-reveal-hidden {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .munlocked-reveal, .munlocked-reveal-hidden { animation: none !important; opacity: 1 !important; }
+}

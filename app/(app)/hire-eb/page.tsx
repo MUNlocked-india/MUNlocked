@@ -45,7 +45,7 @@ export default async function HireEbPage() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 22 }}>
           {ebs?.map((eb) => (
-            <div key={eb.id} style={{ background: "var(--paper)", color: "var(--ink)", borderRadius: 6, padding: 22, boxShadow: "5px 6px 0 rgba(156,110,130,0.25)" }}>
+            <div key={eb.id} className="munlocked-card-hover" style={{ background: "var(--paper)", color: "var(--ink)", borderRadius: 14, padding: 22, boxShadow: "5px 6px 0 rgba(156,110,130,0.2)", transition: "transform 0.25s ease, box-shadow 0.25s ease" }}>
               <div style={{ width: 44, height: 44, borderRadius: "50%", background: "linear-gradient(135deg, var(--mauve), var(--coral))", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--paper)", fontFamily: "Georgia, serif", fontSize: 17, marginBottom: 12 }}>
                 {eb.applicant_email[0]?.toUpperCase()}
               </div>

@@ -3,8 +3,31 @@ import Image from "next/image";
 import "./landing.css";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import SiteHeader from "@/components/SiteHeader";
+import Reveal from "@/components/Reveal";
+import { createClient } from "@/lib/supabase/server";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+
+  const [{ count: confCount }, { count: ebCount }, { count: researchCount }, { data: latestResearch }, { data: latestEbs }] =
+    await Promise.all([
+      supabase.from("conferences").select("*", { count: "exact", head: true }).eq("status", "approved"),
+      supabase.from("eb_applications").select("*", { count: "exact", head: true }).eq("status", "approved"),
+      supabase.from("research_papers").select("*", { count: "exact", head: true }).eq("status", "approved"),
+      supabase
+        .from("research_papers")
+        .select("id, title, committee, agenda, author_name")
+        .eq("status", "approved")
+        .order("created_at", { ascending: false })
+        .limit(3),
+      supabase
+        .from("eb_applications")
+        .select("id, applicant_email, experience, areas_of_expertise")
+        .eq("status", "approved")
+        .order("created_at", { ascending: false })
+        .limit(3),
+    ]);
+
   return (
     <>
       <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -68,9 +91,63 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ---------- LIVE STATS ---------- */}
+      <section style={{ background: "#0F0F10", borderTop: "1px solid rgba(234,217,222,0.08)", borderBottom: "1px solid rgba(234,217,222,0.08)", padding: "44px 24px" }}>
+        <Reveal>
+          <div style={{ display: "flex", justifyContent: "center", gap: 60, flexWrap: "wrap", maxWidth: 900, margin: "0 auto" }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontFamily: "Anton, sans-serif", fontSize: 42, color: "var(--paper)" }}>{confCount ?? 0}</div>
+              <div className="mono" style={{ fontSize: 11, letterSpacing: 1, textTransform: "uppercase", color: "rgba(234,217,222,0.5)", marginTop: 4 }}>Listed Conferences</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontFamily: "Anton, sans-serif", fontSize: 42, color: "var(--paper)" }}>{ebCount ?? 0}</div>
+              <div className="mono" style={{ fontSize: 11, letterSpacing: 1, textTransform: "uppercase", color: "rgba(234,217,222,0.5)", marginTop: 4 }}>Verified EBs</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontFamily: "Anton, sans-serif", fontSize: 42, color: "var(--paper)" }}>{researchCount ?? 0}</div>
+              <div className="mono" style={{ fontSize: 11, letterSpacing: 1, textTransform: "uppercase", color: "rgba(234,217,222,0.5)", marginTop: 4 }}>Research Papers</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontFamily: "Anton, sans-serif", fontSize: 42, color: "var(--paper)" }}>Pan-India</div>
+              <div className="mono" style={{ fontSize: 11, letterSpacing: 1, textTransform: "uppercase", color: "rgba(234,217,222,0.5)", marginTop: 4 }}>Conference Network</div>
+            </div>
+          </div>
+        </Reveal>
+      </section>
+
+      {/* ---------- HOW IT WORKS ---------- */}
+      <section style={{ padding: "90px 24px", maxWidth: 1100, margin: "0 auto" }}>
+        <Reveal>
+          <div className="mono" style={{ textAlign: "center", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "var(--brass)", marginBottom: 10 }}>
+            How It Works
+          </div>
+          <h2 style={{ fontFamily: "Anton, sans-serif", fontWeight: 400, textTransform: "uppercase", fontSize: "clamp(24px, 3.2vw, 40px)", textAlign: "center", marginBottom: 56 }}>
+            Everything a Committee Needs, One Place
+          </h2>
+        </Reveal>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 28 }}>
+          {[
+            { n: "01", t: "Discover", d: "Browse checked conferences and committees, filtered by agenda, city, and format." },
+            { n: "02", t: "Prepare", d: "Pull free, verified background guides and country profiles from the research library." },
+            { n: "03", t: "Compete", d: "EBs hired on a public record run committee off one shared, live digital marksheet." },
+            { n: "04", t: "Get Recognized", d: "Scores, awards, and your MUN portfolio build up on your profile automatically." },
+          ].map((s, i) => (
+            <Reveal key={s.n} delay={i * 100}>
+              <div style={{ borderTop: "2px solid var(--coral)", paddingTop: 18 }}>
+                <div className="mono" style={{ fontSize: 11, color: "rgba(234,217,222,0.4)", marginBottom: 8 }}>{s.n}</div>
+                <h3 style={{ fontFamily: "Georgia, serif", fontSize: 19, marginBottom: 8 }}>{s.t}</h3>
+                <p style={{ fontSize: 13.5, color: "rgba(234,217,222,0.6)", lineHeight: 1.7 }}>{s.d}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
       <section className="placards-section">
-        <div className="placards-head">Raise to Vote</div>
-        <div className="placards-title">Three Motions on the Floor</div>
+        <Reveal>
+          <div className="placards-head">Raise to Vote</div>
+          <div className="placards-title">Three Motions on the Floor</div>
+        </Reveal>
         <div className="placards">
           <Link href="/conferences" className="placard">
             <div className="placard-stripe"></div>
@@ -109,25 +186,77 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ---------- LIVE SPOTLIGHTS ---------- */}
+      <section style={{ padding: "90px 24px", maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 50 }}>
+          <Reveal>
+            <div>
+              <div className="mono" style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "var(--coral)", marginBottom: 8 }}>Live From the Library</div>
+              <h3 style={{ fontFamily: "Georgia, serif", fontSize: 24, marginBottom: 20 }}>Latest Research</h3>
+              {latestResearch && latestResearch.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {latestResearch.map((r) => (
+                    <Link key={r.id} href={`/research/${r.id}`} style={{ textDecoration: "none", color: "inherit", display: "block", borderBottom: "1px solid rgba(234,217,222,0.1)", paddingBottom: 12 }}>
+                      <div style={{ fontFamily: "Georgia, serif", fontSize: 15.5, marginBottom: 4 }}>{r.title}</div>
+                      <div className="mono" style={{ fontSize: 11, color: "rgba(234,217,222,0.5)" }}>{r.committee} · {r.agenda} · By {r.author_name}</div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ fontSize: 13.5, color: "rgba(234,217,222,0.5)" }}>No approved research yet — be the first to submit.</p>
+              )}
+              <Link href="/research" className="mono" style={{ display: "inline-block", marginTop: 16, fontSize: 11.5, letterSpacing: 0.5, textTransform: "uppercase", color: "var(--coral)", textDecoration: "none" }}>Browse the library →</Link>
+            </div>
+          </Reveal>
+          <Reveal delay={120}>
+            <div>
+              <div className="mono" style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "var(--coral)", marginBottom: 8 }}>Verified This Week</div>
+              <h3 style={{ fontFamily: "Georgia, serif", fontSize: 24, marginBottom: 20 }}>Newest EBs</h3>
+              {latestEbs && latestEbs.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {latestEbs.map((eb) => (
+                    <div key={eb.id} style={{ borderBottom: "1px solid rgba(234,217,222,0.1)", paddingBottom: 12 }}>
+                      <div style={{ fontFamily: "Georgia, serif", fontSize: 15.5, marginBottom: 4 }}>{eb.applicant_email}</div>
+                      <div className="mono" style={{ fontSize: 11, color: "rgba(234,217,222,0.5)" }}>{eb.experience?.slice(0, 60)}{eb.experience && eb.experience.length > 60 ? "…" : ""}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ fontSize: 13.5, color: "rgba(234,217,222,0.5)" }}>No verified EBs yet — applications are reviewed before listing.</p>
+              )}
+              <Link href="/hire-eb" className="mono" style={{ display: "inline-block", marginTop: 16, fontSize: 11.5, letterSpacing: 0.5, textTransform: "uppercase", color: "var(--coral)", textDecoration: "none" }}>Hire an EB →</Link>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       <section className="rules-section">
-        <div className="rules-head">The Standing Rules</div>
-        <div className="rules-title">What MUNlocked Won&apos;t Compromise On</div>
+        <Reveal>
+          <div className="rules-head">The Standing Rules</div>
+          <div className="rules-title">What MUNlocked Won&apos;t Compromise On</div>
+        </Reveal>
         <div className="rules-grid">
-          <div className="rule">
-            <div className="rule-num">Rule 01</div>
-            <h3>No Closed Rooms</h3>
-            <p>Every EB appointment and every conference listing goes through a visible, checkable process — not a private group chat.</p>
-          </div>
-          <div className="rule">
-            <div className="rule-num">Rule 02</div>
-            <h3>Research Stays Free</h3>
-            <p>A first-time delegate should never have to pay to understand their committee. Verified research is free from day one.</p>
-          </div>
-          <div className="rule">
-            <div className="rule-num">Rule 03</div>
-            <h3>One Record, Not Five Spreadsheets</h3>
-            <p>Scoring, attendance, and recognition live in one shared marksheet the whole dais and Secretariat can actually see.</p>
-          </div>
+          <Reveal>
+            <div className="rule">
+              <div className="rule-num">Rule 01</div>
+              <h3>No Closed Rooms</h3>
+              <p>Every EB appointment and every conference listing goes through a visible, checkable process — not a private group chat.</p>
+            </div>
+          </Reveal>
+          <Reveal delay={100}>
+            <div className="rule">
+              <div className="rule-num">Rule 02</div>
+              <h3>Research Stays Free</h3>
+              <p>A first-time delegate should never have to pay to understand their committee. Verified research is free from day one.</p>
+            </div>
+          </Reveal>
+          <Reveal delay={200}>
+            <div className="rule">
+              <div className="rule-num">Rule 03</div>
+              <h3>One Record, Not Five Spreadsheets</h3>
+              <p>Scoring, attendance, and recognition live in one shared marksheet the whole dais and Secretariat can actually see.</p>
+            </div>
+          </Reveal>
         </div>
       </section>
 
