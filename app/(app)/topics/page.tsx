@@ -1,3 +1,5 @@
+import SpotlightCard from "@/components/SpotlightCard";
+
 const COMMITTEES = [
   { code: "UNSC", name: "Security Council", tag: "Peace & Security", topics: ["Red Sea maritime security", "Veto reform", "Peacekeeping mandates"] },
   { code: "UNHRC", name: "Human Rights Council", tag: "Human Rights", topics: ["Human rights defenders", "Digital surveillance & spyware", "Minority protections"] },
@@ -24,7 +26,7 @@ export default function TopicsPage() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 22 }}>
           {COMMITTEES.map((c) => (
-            <div key={c.code} className="munlocked-card-hover" style={{ background: "var(--paper)", color: "var(--ink)", borderRadius: 14, padding: 24, boxShadow: "5px 6px 0 rgba(156,110,130,0.2)", transition: "transform 0.25s ease, box-shadow 0.25s ease" }}>
+            <SpotlightCard key={c.code} className="munlocked-card-hover" style={{ background: "var(--paper)", color: "var(--ink)", borderRadius: 14, padding: 24, boxShadow: "5px 6px 0 rgba(156,110,130,0.2)", transition: "transform 0.25s ease, box-shadow 0.25s ease" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
                 <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(7,7,7,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <div style={{ width: 14, height: 14, borderRadius: "50%", background: "linear-gradient(135deg, var(--mauve), var(--coral))" }} />
@@ -42,7 +44,7 @@ export default function TopicsPage() {
                   </span>
                 ))}
               </div>
-            </div>
+            </SpotlightCard>
           ))}
         </div>
       </div>

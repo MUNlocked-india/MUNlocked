@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { toggleUpvote } from "./actions";
+import SpotlightCard from "@/components/SpotlightCard";
 
 const COMMITTEES = ["UNSC", "UNHRC", "DISEC", "ECOSOC", "WHO", "UNEP", "AIPPM", "UNODC"];
 
@@ -94,7 +95,7 @@ export default async function ResearchPage({
             const upvoted = userUpvoted.has(p.id);
             const boundToggle = toggleUpvote.bind(null, p.id);
             return (
-              <div key={p.id} className="munlocked-card-hover" style={{ background: "var(--paper)", color: "var(--ink)", borderRadius: 14, padding: 22, boxShadow: "5px 6px 0 rgba(156,110,130,0.2)", transition: "transform 0.25s ease, box-shadow 0.25s ease" }}>
+              <SpotlightCard key={p.id} className="munlocked-card-hover" style={{ background: "var(--paper)", color: "var(--ink)", borderRadius: 14, padding: 22, boxShadow: "5px 6px 0 rgba(156,110,130,0.2)", transition: "transform 0.25s ease, box-shadow 0.25s ease" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                   <span className="mono" style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", background: "rgba(7,7,7,0.08)", padding: "3px 8px", borderRadius: 3 }}>
                     {p.document_type}
@@ -111,7 +112,7 @@ export default async function ResearchPage({
                 <p className="mono" style={{ fontSize: 11, color: "rgba(7,7,7,0.55)", marginBottom: 10 }}>{p.committee} · {p.agenda}</p>
                 <p style={{ fontSize: 13, color: "rgba(7,7,7,0.7)", lineHeight: 1.55, marginBottom: 14 }}>{p.summary}</p>
                 <p className="mono" style={{ fontSize: 11, color: "rgba(7,7,7,0.5)" }}>By {p.author_name}</p>
-              </div>
+              </SpotlightCard>
             );
           })}
         </div>

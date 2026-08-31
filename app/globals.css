@@ -129,6 +129,29 @@ button.submit:disabled { opacity: 0.6; cursor: not-allowed; }
   box-shadow: 9px 12px 0 rgba(156,110,130,0.3) !important;
 }
 
+.munlocked-nav-link {
+  position: relative;
+  padding-bottom: 2px;
+}
+.munlocked-nav-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  width: 100%;
+  height: 1.5px;
+  background: var(--coral);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s ease;
+}
+.munlocked-nav-link:hover::after {
+  transform: scaleX(1);
+}
+.munlocked-nav-link:hover {
+  opacity: 1 !important;
+}
+
 @keyframes munlocked-reveal {
   from { opacity: 0; transform: translateY(18px); }
   to { opacity: 1; transform: translateY(0); }

@@ -4,6 +4,7 @@ import "./landing.css";
 import { ADMIN_EMAIL } from "@/lib/constants";
 import SiteHeader from "@/components/SiteHeader";
 import Reveal from "@/components/Reveal";
+import BlurText from "@/components/BlurText";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function Home() {
@@ -117,14 +118,14 @@ export default async function Home() {
 
       {/* ---------- HOW IT WORKS ---------- */}
       <section style={{ padding: "90px 24px", maxWidth: 1100, margin: "0 auto" }}>
-        <Reveal>
-          <div className="mono" style={{ textAlign: "center", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "var(--brass)", marginBottom: 10 }}>
-            How It Works
-          </div>
-          <h2 style={{ fontFamily: "Anton, sans-serif", fontWeight: 400, textTransform: "uppercase", fontSize: "clamp(24px, 3.2vw, 40px)", textAlign: "center", marginBottom: 56 }}>
-            Everything a Committee Needs, One Place
-          </h2>
-        </Reveal>
+        <div className="mono" style={{ textAlign: "center", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "var(--brass)", marginBottom: 10 }}>
+          How It Works
+        </div>
+        <BlurText
+          as="h2"
+          text="Everything a Committee Needs, One Place"
+          style={{ fontFamily: "Anton, sans-serif", fontWeight: 400, textTransform: "uppercase", fontSize: "clamp(24px, 3.2vw, 40px)", textAlign: "center", marginBottom: 56, display: "block" }}
+        />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 28 }}>
           {[
             { n: "01", t: "Discover", d: "Browse checked conferences and committees, filtered by agenda, city, and format." },
