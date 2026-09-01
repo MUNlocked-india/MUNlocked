@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import SpotlightCard from "@/components/SpotlightCard";
+import { rateEb } from "./actions";
 
 export default async function HireEbPage() {
   const supabase = await createClient();
@@ -10,7 +11,7 @@ export default async function HireEbPage() {
 
   const { data: ebs, error } = await supabase
     .from("eb_applications")
-    .select("id, applicant_email, display_name, bio, experience, areas_of_expertise, previous_conferences, photo_path, cv_path, created_at")
+    .select("id, applicant_id, applicant_email, display_name, bio, experience, areas_of_expertise, previous_conferences, photo_path, cv_path, created_at")
     .eq("status", "approved")
     .order("created_at", { ascending: false });
 
@@ -23,6 +24,19 @@ export default async function HireEbPage() {
       return { ...eb, photoUrl: photo.data?.signedUrl ?? null, cvUrl: cv.data?.signedUrl ?? null };
     })
   );
+
+  const profileIds = profiles.map((eb) => eb.id);
+  const { data: reviews } = user && profileIds.length
+    ? await supabase.from("eb_reviews").select("eb_application_id, reviewer_id, rating").in("eb_application_id", profileIds)
+    : { data: [] as { eb_application_id: string; reviewer_id: string; rating: number }[] };
+  const reviewsByEb = new Map<string, { total: number; count: number; mine?: number }>();
+  reviews?.forEach((review) => {
+    const current = reviewsByEb.get(review.eb_application_id) ?? { total: 0, count: 0 };
+    current.total += review.rating;
+    current.count += 1;
+    if (review.reviewer_id === user?.id) current.mine = review.rating;
+    reviewsByEb.set(review.eb_application_id, current);
+  });
 
   return (
     <div style={{ minHeight: "100vh", padding: "48px 24px 100px" }}>
@@ -60,6 +74,10 @@ export default async function HireEbPage() {
               {eb.photoUrl ? <img src={eb.photoUrl} alt={`Formal profile photo of ${eb.display_name ?? "Executive Board member"}`} style={{ width: 62, height: 62, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--coral)", marginBottom: 12 }} /> : <div style={{ width: 62, height: 62, borderRadius: "50%", background: "linear-gradient(135deg, var(--mauve), var(--coral))", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--paper)", fontFamily: "Georgia, serif", fontSize: 20, marginBottom: 12 }}>{(eb.display_name ?? eb.applicant_email)[0]?.toUpperCase()}</div>}
               <h2 style={{ fontFamily: "Georgia, serif", fontSize: 20, marginBottom: 6 }}>{eb.display_name ?? "Verified Executive Board"}</h2>
               <div className="mono" style={{ fontSize: 10, color: "var(--coral)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Verified Executive Board</div>
+              {(() => {
+                const rating = reviewsByEb.get(eb.id);
+                return <p className="mono" style={{ fontSize: 11, color: "rgba(7,7,7,.65)", marginBottom: 10 }}>★ {rating ? (rating.total / rating.count).toFixed(1) : "New"} <span style={{ opacity: .65 }}>· {rating?.count ?? 0} rating{rating?.count === 1 ? "" : "s"}</span></p>;
+              })()}
               <p style={{ fontSize: 13.5, lineHeight: 1.6, marginBottom: 10, color: "rgba(7,7,7,0.75)" }}>{eb.bio}</p>
               <p className="mono" style={{ fontSize: 11, color: "rgba(7,7,7,0.55)", marginBottom: 10 }}>{eb.experience}</p>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -70,6 +88,7 @@ export default async function HireEbPage() {
                 ))}
               </div>
               {eb.cvUrl && <a href={eb.cvUrl} target="_blank" rel="noreferrer" className="mono" style={{ display:"inline-block", marginTop:14, color:"var(--ink)", fontSize:11, fontWeight:700 }}>View CV / MUN Portfolio ↗</a>}
+              {user && user.id !== eb.applicant_id && <form action={rateEb} style={{ display: "flex", gap: 7, alignItems: "center", marginTop: 14 }}><input type="hidden" name="eb_application_id" value={eb.id} /><select name="rating" defaultValue={reviewsByEb.get(eb.id)?.mine ?? ""} required aria-label={`Rate ${eb.display_name ?? "this EB"}`} style={{ padding: "6px 8px", borderRadius: 4, border: "1px solid rgba(7,7,7,.22)", background: "transparent", fontSize: 11 }}><option value="" disabled>Rate this EB</option><option value="5">★★★★★ · 5</option><option value="4">★★★★ · 4</option><option value="3">★★★ · 3</option><option value="2">★★ · 2</option><option value="1">★ · 1</option></select><button type="submit" className="mono" style={{ background: "transparent", color: "var(--ink)", border: "1px solid rgba(7,7,7,.3)", borderRadius: 4, padding: "7px 9px", fontSize: 10, cursor: "pointer", textTransform: "uppercase" }}>Save</button></form>}
               <Link href={user ? `/inbox?eb=${eb.id}` : "/login"} className="mono" style={{ display:"inline-block", marginTop:16, background:"var(--ink)", color:"var(--paper)", padding:"9px 12px", borderRadius:4, textDecoration:"none", fontSize:11, textTransform:"uppercase" }}>Message through MUNlocked →</Link>
             </SpotlightCard>
           ))}
