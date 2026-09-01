@@ -72,7 +72,7 @@ export default async function DashboardPage() {
               Review Conferences
             </a>
             <a href="/admin/eb-applications" className="mono" style={{ background: "var(--coral)", color: "var(--ink)", padding: "10px 18px", borderRadius: 3, textDecoration: "none", fontSize: 12, fontWeight: 700, textTransform: "uppercase" }}>
-              Review EB Applications
+              Manage EB Marketplace
             </a>
             <a href="/admin/research" className="mono" style={{ background: "var(--coral)", color: "var(--ink)", padding: "10px 18px", borderRadius: 3, textDecoration: "none", fontSize: 12, fontWeight: 700, textTransform: "uppercase" }}>
               Review Research

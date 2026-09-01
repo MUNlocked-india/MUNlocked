@@ -59,15 +59,15 @@ export default async function HireEbPage({ searchParams }: { searchParams: Promi
           <div>
             <h1 style={{ fontFamily: "Georgia, serif", fontSize: 32, marginBottom: 8 }}>Hire an EB</h1>
             <p style={{ color: "rgba(234,217,222,0.6)", fontSize: 14, maxWidth: 540 }}>
-              Every profile here has been reviewed and approved by an admin — chairs get discovered on record, not on who they know. Formal photos and CVs are visible only after approval.
+              EBs publish their professional profile, experience, formal photo and CV directly. Admins can remove marketplace listings that breach community rules.
             </p>
           </div>
           <Link
-            href={user ? "/hire-eb/apply" : "/login"}
+            href={user ? "/hire-eb/manage" : "/login"}
             className="mono"
             style={{ background: "var(--paper)", color: "var(--ink)", padding: "12px 20px", borderRadius: 3, textDecoration: "none", fontSize: 12, fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}
           >
-            + Apply as EB
+            {user ? "Manage / publish profile" : "+ Publish EB profile"}
           </Link>
         </div>
 
@@ -82,7 +82,7 @@ export default async function HireEbPage({ searchParams }: { searchParams: Promi
 
         {profiles.length === 0 && (
           <div style={{ background: "#0F0F10", border: "1px dashed rgba(234,217,222,0.2)", borderRadius: 8, padding: 40, textAlign: "center", color: "rgba(234,217,222,0.55)" }}>
-            {ebs?.length ? "No verified EBs match these filters. Try a different search or expertise." : "No approved EB profiles yet. Applications go into a pending queue for admin review."}
+            {ebs?.length ? "No EB profiles match these filters. Try a different search or expertise." : "No EB profiles have been published yet. Members can publish their profile directly."}
           </div>
         )}
 
@@ -90,8 +90,8 @@ export default async function HireEbPage({ searchParams }: { searchParams: Promi
           {profiles.map((eb) => (
             <SpotlightCard key={eb.id} className="munlocked-card-hover" style={{ background: "var(--paper)", color: "var(--ink)", borderRadius: 14, padding: 22, boxShadow: "5px 6px 0 rgba(156,110,130,0.2)", transition: "transform 0.25s ease, box-shadow 0.25s ease" }}>
               {eb.photoUrl ? <img src={eb.photoUrl} alt={`Formal profile photo of ${eb.display_name ?? "Executive Board member"}`} style={{ width: 62, height: 62, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--coral)", marginBottom: 12 }} /> : <div style={{ width: 62, height: 62, borderRadius: "50%", background: "linear-gradient(135deg, var(--mauve), var(--coral))", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--paper)", fontFamily: "Georgia, serif", fontSize: 20, marginBottom: 12 }}>{(eb.display_name ?? eb.applicant_email)[0]?.toUpperCase()}</div>}
-              <h2 style={{ fontFamily: "Georgia, serif", fontSize: 20, marginBottom: 6 }}>{eb.display_name ?? "Verified Executive Board"}</h2>
-              <div className="mono" style={{ fontSize: 10, color: "var(--coral)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Verified Executive Board</div>
+              <h2 style={{ fontFamily: "Georgia, serif", fontSize: 20, marginBottom: 6 }}>{eb.display_name ?? "Executive Board"}</h2>
+              <div className="mono" style={{ fontSize: 10, color: "var(--coral)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Executive Board profile</div>
               {(() => {
                 const rating = reviewsByEb.get(eb.id);
                 return <p className="mono" style={{ fontSize: 11, color: "rgba(7,7,7,.65)", marginBottom: 10 }}>★ {rating ? (rating.total / rating.count).toFixed(1) : "New"} <span style={{ opacity: .65 }}>· {rating?.count ?? 0} rating{rating?.count === 1 ? "" : "s"}</span></p>;

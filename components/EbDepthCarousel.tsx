@@ -50,7 +50,7 @@ export default function EbDepthCarousel({ items }: { items: EbShowcaseItem[] }) 
               {item.photoUrl ? <Image src={item.photoUrl} alt={`Formal photo of ${item.name}`} fill sizes="245px" unoptimized style={{ objectFit: "cover", opacity: offset === 0 ? 0.9 : 0.56 }} /> : <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 25%, rgba(201,138,148,.85), transparent 42%), linear-gradient(145deg,#2e2430,#080808)" }} />}
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 27%, rgba(8,8,8,.93) 92%)" }} />
               <div style={{ position: "absolute", left: 18, right: 18, bottom: 17 }}>
-                <div className="mono" style={{ fontSize: 9.5, color: "var(--coral)", letterSpacing: 1.3, textTransform: "uppercase", marginBottom: 6 }}>Verified EB</div>
+                <div className="mono" style={{ fontSize: 9.5, color: "var(--coral)", letterSpacing: 1.3, textTransform: "uppercase", marginBottom: 6 }}>EB Marketplace</div>
                 <h4 style={{ fontFamily: "Georgia, serif", fontSize: 20, margin: 0, color: "var(--text)" }}>{item.name}</h4>
                 <p className="mono" style={{ color: "rgba(234,217,222,.65)", fontSize: 10.5, margin: "7px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.expertise.slice(0, 2).join(" · ") || item.experience}</p>
               </div>

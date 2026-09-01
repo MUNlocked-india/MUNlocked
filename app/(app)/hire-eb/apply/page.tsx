@@ -12,6 +12,14 @@ async function submitApplication(formData: FormData) {
 
   const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user!.id).single();
 
+  const { data: existingProfile } = await supabase
+    .from("eb_applications")
+    .select("id")
+    .eq("applicant_id", user!.id)
+    .eq("status", "approved")
+    .maybeSingle();
+  if (existingProfile) redirect("/hire-eb/manage");
+
   const areas = String(formData.get("areas_of_expertise") || "")
     .split(",")
     .map((a) => a.trim())
@@ -49,7 +57,7 @@ async function submitApplication(formData: FormData) {
     previous_conferences: String(formData.get("previous_conferences") || "") || null,
     photo_path: photoPath,
     cv_path: cvPath,
-    status: "pending",
+    status: "approved",
   });
 
   if (error) {
@@ -58,7 +66,7 @@ async function submitApplication(formData: FormData) {
 
   await notifyAdmin(
     "New EB application submitted for review",
-    `${user!.email} just applied to become a verified EB.\n\nExperience: ${formData.get("experience")}\nExpertise: ${areas.join(", ")}\n\nReview it at /admin/eb-applications.`
+    `${user!.email} published a new EB profile.\n\nExperience: ${formData.get("experience")}\nExpertise: ${areas.join(", ")}\n\nYou can remove it if it breaches marketplace rules: /admin/eb-applications.`
   );
 
   redirect("/hire-eb/apply?success=1");
@@ -77,12 +85,12 @@ export default async function ApplyEbPage({
         <div className="mono" style={{ fontSize: 11, letterSpacing: 2, color: "var(--coral)", marginBottom: 8, textTransform: "uppercase" }}>
           File No. IN/MUN/EB-APPLY
         </div>
-        <h1 style={{ fontFamily: "Georgia, serif", fontSize: 24, marginBottom: 6 }}>Apply as a Verified EB</h1>
+        <h1 style={{ fontFamily: "Georgia, serif", fontSize: 24, marginBottom: 6 }}>Publish your EB Profile</h1>
         <p style={{ fontSize: 13, color: "rgba(7,7,7,0.6)", marginBottom: 20 }}>
-          An admin reviews every application before it's listed. Once approved, your formal photo, name and CV/portfolio appear in the MUNlocked Hire an EB directory for members to review.
+          Your profile goes live immediately in the MUNlocked Hire an EB directory. Upload only a formal photo and a CV/portfolio you are happy for members to review; admins can remove listings that breach marketplace rules.
         </p>
 
-        {params.success && <p className="success-text">Application submitted — it's now pending admin review.</p>}
+        {params.success && <p className="success-text">Your EB profile is live in the marketplace.</p>}
         {params.error && <p className="error-text">Error: {params.error}</p>}
 
         <label htmlFor="bio">Short Bio</label>
@@ -94,7 +102,7 @@ export default async function ApplyEbPage({
 
         <label htmlFor="cv">CV / MUN Portfolio (PDF)</label>
         <input id="cv" name="cv" type="file" required accept="application/pdf" />
-        <p style={{ marginTop: -10, marginBottom: 16, fontSize: 12, color: "rgba(7,7,7,0.58)" }}>PDF · maximum 10 MB · shown in your member-visible profile only after approval</p>
+        <p style={{ marginTop: -10, marginBottom: 16, fontSize: 12, color: "rgba(7,7,7,0.58)" }}>PDF · maximum 10 MB · shown in your member-visible marketplace profile</p>
 
         <label htmlFor="experience">MUN Experience</label>
         <textarea id="experience" name="experience" required rows={3} style={textareaStyle} placeholder="Committees chaired, conferences attended, notable achievements." />
@@ -105,7 +113,7 @@ export default async function ApplyEbPage({
         <label htmlFor="previous_conferences">Previous Conferences (optional)</label>
         <textarea id="previous_conferences" name="previous_conferences" rows={2} style={textareaStyle} placeholder="Aethris MUN 2025 — Vice Chair, UNSC" />
 
-        <button type="submit" className="submit">Submit Application</button>
+        <button type="submit" className="submit">Publish EB Profile</button>
       </form>
     </div>
   );

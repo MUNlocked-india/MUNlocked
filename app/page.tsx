@@ -38,7 +38,7 @@ export default async function Home() {
         : { data: null };
       return {
         id: eb.id,
-        name: eb.display_name ?? "Verified Executive Board",
+        name: eb.display_name ?? "Executive Board",
         experience: eb.experience ?? "MUNlocked verified profile",
         expertise: eb.areas_of_expertise ?? [],
         photoUrl: photo.data?.signedUrl ?? null,
@@ -231,8 +231,8 @@ export default async function Home() {
           </Reveal>
           <Reveal delay={120}>
             <div>
-              <div className="mono" style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "var(--coral)", marginBottom: 8 }}>Verified This Week</div>
-              <h3 style={{ fontFamily: "Georgia, serif", fontSize: 24, marginBottom: 8 }}>Verified EBs, On Record</h3>
+              <div className="mono" style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "var(--coral)", marginBottom: 8 }}>From the Marketplace</div>
+              <h3 style={{ fontFamily: "Georgia, serif", fontSize: 24, marginBottom: 8 }}>EBs, On Record</h3>
               {featuredEbs.length > 0 ? (
                 <EbDepthCarousel items={featuredEbs} />
               ) : (
