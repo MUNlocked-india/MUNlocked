@@ -9,7 +9,7 @@ export default async function SubmitResearchPage({
 
   return (
     <div className="auth-wrap" style={{ alignItems: "flex-start", paddingTop: 60 }}>
-      <form action={submitResearch} className="auth-card" style={{ maxWidth: 560 }}>
+      <form action={submitResearch} encType="multipart/form-data" className="auth-card" style={{ maxWidth: 560 }}>
         <div className="mono" style={{ fontSize: 11, letterSpacing: 2, color: "var(--coral)", marginBottom: 8, textTransform: "uppercase" }}>
           File No. IN/MUN/RESEARCH-SUBMIT
         </div>
@@ -52,6 +52,10 @@ export default async function SubmitResearchPage({
 
         <label htmlFor="full_text">Full Research Text</label>
         <textarea id="full_text" name="full_text" required rows={10} style={textareaStyle} placeholder="Paste the full background guide / brief here." />
+
+        <label htmlFor="document">Attach the guide (optional)</label>
+        <input id="document" name="document" type="file" accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+        <p style={{ marginTop: -10, marginBottom: 16, fontSize: 12, color: "rgba(7,7,7,0.58)" }}>PDF or DOCX · maximum 15 MB</p>
 
         <button type="submit" className="submit">Submit for Review</button>
       </form>

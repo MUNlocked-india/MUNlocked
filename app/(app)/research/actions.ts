@@ -13,6 +13,17 @@ export async function submitResearch(formData: FormData) {
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user!.id).single();
+  const document = formData.get("document");
+  let filePath: string | null = null;
+  if (document instanceof File && document.size > 0) {
+    if (!['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(document.type) || document.size > 15 * 1024 * 1024) {
+      redirect(`/research/submit?error=${encodeURIComponent("Upload a PDF or DOCX under 15 MB.")}`);
+    }
+    const extension = document.name.split(".").pop()?.toLowerCase() || "pdf";
+    filePath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+    const { error: uploadError } = await supabase.storage.from("research-uploads").upload(filePath, document, { contentType: document.type });
+    if (uploadError) redirect(`/research/submit?error=${encodeURIComponent(uploadError.message)}`);
+  }
 
   const { error } = await supabase.from("research_papers").insert({
     submitted_by: user!.id,
@@ -24,6 +35,7 @@ export async function submitResearch(formData: FormData) {
     agenda: String(formData.get("agenda")),
     summary: String(formData.get("summary")),
     full_text: String(formData.get("full_text")),
+    file_path: filePath,
     status: "pending",
   });
 
