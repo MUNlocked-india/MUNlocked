@@ -10,9 +10,18 @@ export default async function ConferencesPage() {
 
   const { data: conferences, error } = await supabase
     .from("conferences")
-    .select("id, name, secretariat, format, city, event_date, delegate_fee, committees, registration_url")
+    .select("id, name, secretariat, format, city, event_date, delegate_fee, committees, registration_url, logo_path")
     .eq("status", "approved")
     .order("event_date", { ascending: true });
+
+  const listings = await Promise.all(
+    (conferences ?? []).map(async (conference) => {
+      const logo = conference.logo_path
+        ? await supabase.storage.from("conference-assets").createSignedUrl(conference.logo_path, 60 * 10)
+        : { data: null };
+      return { ...conference, logoUrl: logo.data?.signedUrl ?? null };
+    })
+  );
 
   return (
     <div style={{ minHeight: "100vh", padding: "48px 24px 100px" }}>
@@ -42,18 +51,21 @@ export default async function ConferencesPage() {
           </p>
         )}
 
-        {!error && conferences?.length === 0 && (
+        {!error && listings.length === 0 && (
           <div style={{ background: "#0F0F10", border: "1px dashed rgba(234,217,222,0.2)", borderRadius: 8, padding: 40, textAlign: "center", color: "rgba(234,217,222,0.55)" }}>
             No approved conferences yet. Submissions go into a pending queue for admin review — be the first to submit one.
           </div>
         )}
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 22 }}>
-          {conferences?.map((c) => (
+          {listings.map((c) => (
             <SpotlightCard key={c.id} className="munlocked-card-hover" style={{ background: "var(--paper)", color: "var(--ink)", borderRadius: 14, padding: 22, boxShadow: "5px 6px 0 rgba(156,110,130,0.2)", transition: "transform 0.25s ease, box-shadow 0.25s ease" }}>
-              <span className="mono" style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", background: "rgba(7,7,7,0.08)", padding: "3px 8px", borderRadius: 3 }}>
-                {c.format.replace("_", " ")}
-              </span>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+                <span className="mono" style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", background: "rgba(7,7,7,0.08)", padding: "3px 8px", borderRadius: 3 }}>
+                  {c.format.replace("_", " ")}
+                </span>
+                {c.logoUrl && <img src={c.logoUrl} alt={`${c.name} logo`} style={{ width: 58, height: 58, objectFit: "contain", borderRadius: 9, background: "rgba(7,7,7,.04)", padding: 5 }} />}
+              </div>
               <h3 style={{ fontFamily: "Georgia, serif", fontSize: 19, margin: "12px 0 6px" }}>{c.name}</h3>
               <p className="mono" style={{ fontSize: 11, color: "rgba(7,7,7,0.55)", marginBottom: 10 }}>
                 {new Date(c.event_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}

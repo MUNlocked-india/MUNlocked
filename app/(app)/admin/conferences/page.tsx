@@ -67,9 +67,18 @@ export default async function AdminConferencesPage() {
 
   const { data: pending, error } = await supabase
     .from("conferences")
-    .select("id, name, secretariat, contact_email, format, city, event_date, delegate_fee, committees, created_at")
+    .select("id, name, secretariat, contact_email, format, city, event_date, delegate_fee, committees, logo_path, created_at")
     .eq("status", "pending")
     .order("created_at", { ascending: true });
+
+  const submissions = await Promise.all(
+    (pending ?? []).map(async (conference) => {
+      const logo = conference.logo_path
+        ? await supabase.storage.from("conference-assets").createSignedUrl(conference.logo_path, 60 * 10)
+        : { data: null };
+      return { ...conference, logoUrl: logo.data?.signedUrl ?? null };
+    })
+  );
 
   return (
     <div style={{ minHeight: "100vh", padding: "48px 24px 100px" }}>
@@ -79,19 +88,19 @@ export default async function AdminConferencesPage() {
         </div>
         <h1 style={{ fontFamily: "Georgia, serif", fontSize: 30, marginBottom: 8 }}>Pending Conferences</h1>
         <p style={{ color: "rgba(234,217,222,0.6)", fontSize: 14, marginBottom: 34 }}>
-          {pending?.length ?? 0} submission{pending?.length === 1 ? "" : "s"} waiting for review.
+          {submissions.length} submission{submissions.length === 1 ? "" : "s"} waiting for review.
         </p>
 
         {error && <p style={{ color: "#e59aa8" }}>Could not load queue: {error.message}</p>}
 
-        {pending?.length === 0 && (
+        {submissions.length === 0 && (
           <div style={{ background: "#0F0F10", border: "1px dashed rgba(234,217,222,0.2)", borderRadius: 8, padding: 40, textAlign: "center", color: "rgba(234,217,222,0.55)" }}>
             Queue is empty. Nothing waiting on you right now.
           </div>
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {pending?.map((c) => (
+          {submissions.map((c) => (
             <div key={c.id} style={{ background: "#0F0F10", border: "1px solid rgba(234,217,222,0.12)", borderRadius: 8, padding: 24 }}>
               <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
                 <h3 style={{ fontFamily: "Georgia, serif", fontSize: 19 }}>{c.name}</h3>
@@ -107,6 +116,7 @@ export default async function AdminConferencesPage() {
                 <b style={{ color: "var(--coral)" }}>Fee:</b> {c.delegate_fee != null ? `₹${c.delegate_fee}` : "—"}<br />
                 <b style={{ color: "var(--coral)" }}>Committees:</b> {c.committees?.join(", ") || "—"}
               </p>
+              {c.logoUrl && <a href={c.logoUrl} target="_blank" rel="noreferrer" className="mono" style={{ color: "var(--coral)", fontSize: 11 }}>View submitted logo ↗</a>}
               <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
                 <form action={reviewConference}>
                   <input type="hidden" name="id" value={c.id} />
