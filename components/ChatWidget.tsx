@@ -7,9 +7,10 @@ type VoiceRecognition = { lang: string; interimResults: boolean; maxAlternatives
 type VoiceWindow = Window & typeof globalThis & { SpeechRecognition?: new () => VoiceRecognition; webkitSpeechRecognition?: new () => VoiceRecognition };
 
 const SUGGESTIONS = [
-  "How do I raise a Point of Inquiry?",
-  "How do I write a good speech for GSL?",
-  "What's the difference between a moderated and unmoderated caucus?",
+  { label: "Draft a speech", prompt: "Help me draft a confident 60-second GSL opening speech. First ask for my country, committee, agenda and position." },
+  { label: "Build POIs", prompt: "Help me prepare 5 sharp Points of Information. First ask for the committee, agenda and the country I am questioning." },
+  { label: "Caucus strategy", prompt: "Help me choose a moderated caucus topic and strategy. First ask for my committee, agenda and country position." },
+  { label: "Procedure coach", prompt: "Explain the key motions and points I need for a first MUN, with sample lines I can actually say in committee." },
 ];
 
 const TEASER_LINES = [
@@ -280,10 +281,10 @@ export default function ChatWidget() {
 
           {messages.length === 1 && (
             <div style={{ display: "flex", gap: 6, padding: "0 16px 10px", flexWrap: "wrap" }}>
-              {SUGGESTIONS.map((s) => (
+              {SUGGESTIONS.map((suggestion) => (
                 <button
-                  key={s}
-                  onClick={() => send(s)}
+                  key={suggestion.label}
+                  onClick={() => send(suggestion.prompt)}
                   className="mono"
                   style={{
                     background: "none",
@@ -295,7 +296,7 @@ export default function ChatWidget() {
                     cursor: "pointer",
                   }}
                 >
-                  {s}
+                  {suggestion.label}
                 </button>
               ))}
             </div>

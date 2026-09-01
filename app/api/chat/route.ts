@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     if (!response.ok) {
       const errText = await response.text();
       return NextResponse.json(
-        { error: `Anthropic API error: ${errText}` },
+        { error: `OpenAI API error: ${errText}` },
         { status: response.status }
       );
     }
