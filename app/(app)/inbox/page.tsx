@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
+import InquiryTemplates from "@/components/InquiryTemplates";
 
 async function sendMessage(formData: FormData) {
   "use server";
@@ -36,7 +37,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     <h1 style={{ fontFamily: "Georgia, serif", fontSize: 32, marginBottom: 8 }}>Your EB conversations</h1>
     <p style={{ color: "rgba(234,217,222,0.62)", marginBottom: 28 }}>Keep conference hiring conversations inside MUNlocked. EBs are notified by email when a new inquiry arrives.</p>
     {params.sent && <p className="success-text">Message sent — the EB has been notified by email.</p>}{params.error && <p className="error-text">{params.error}</p>}
-    {selectedEb && <form action={sendMessage} className="auth-card" style={{ maxWidth: 620, marginBottom: 30 }}><input type="hidden" name="eb_id" value={selectedEb.id}/><h2 style={{ fontFamily: "Georgia, serif", fontSize: 21, marginBottom: 8 }}>Contact {selectedEb.applicant_email}</h2><p style={{ fontSize: 13, color: "rgba(7,7,7,.65)", marginBottom: 18 }}>{selectedEb.bio}</p><label htmlFor="subject">Conference / appointment subject</label><input id="subject" name="subject" required placeholder="e.g. Chair invitation for AcmeMUN 2026"/><label htmlFor="body">Your message</label><textarea id="body" name="body" required rows={7} style={{ width:"100%", padding:12, marginTop:6, marginBottom:16, resize:"vertical" }} placeholder="Introduce your conference, committee, dates, role, and next steps."/><button className="submit">Send via MUNlocked</button></form>}
+    {selectedEb && <form action={sendMessage} className="auth-card" style={{ maxWidth: 620, marginBottom: 30 }}><input type="hidden" name="eb_id" value={selectedEb.id}/><h2 style={{ fontFamily: "Georgia, serif", fontSize: 21, marginBottom: 8 }}>Contact {selectedEb.applicant_email}</h2><p style={{ fontSize: 13, color: "rgba(7,7,7,.65)", marginBottom: 18 }}>{selectedEb.bio}</p><InquiryTemplates /><label htmlFor="subject">Conference / appointment subject</label><input id="subject" name="subject" required placeholder="e.g. Chair invitation for AcmeMUN 2026"/><label htmlFor="body">Your message</label><textarea id="body" name="body" required rows={7} style={{ width:"100%", padding:12, marginTop:6, marginBottom:16, resize:"vertical" }} placeholder="Introduce your conference, committee, dates, role, and next steps."/><button className="submit">Send via MUNlocked</button></form>}
     <div style={{ display:"grid", gap:10 }}>{conversations?.length ? conversations.map(c => <Link href={`/inbox/${c.id}`} key={c.id} style={{ border:"1px solid rgba(234,217,222,.14)", padding:16, borderRadius:8, textDecoration:"none" }}><b>{c.subject}</b><div className="mono" style={{ fontSize:11, opacity:.55, marginTop:6 }}>Conversation active · {new Date(c.created_at).toLocaleDateString()}</div></Link>) : <p style={{ opacity:.65 }}>No conversations yet. <Link href="/hire-eb">Browse verified EBs →</Link></p>}</div>
   </div></div>;
 }
