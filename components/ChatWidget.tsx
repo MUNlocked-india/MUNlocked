@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 type Msg = { role: "user" | "assistant"; content: string };
+type VoiceRecognition = { lang: string; interimResults: boolean; maxAlternatives: number; start: () => void; onstart: (() => void) | null; onend: (() => void) | null; onerror: (() => void) | null; onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null };
+type VoiceWindow = Window & typeof globalThis & { SpeechRecognition?: new () => VoiceRecognition; webkitSpeechRecognition?: new () => VoiceRecognition };
 
 const SUGGESTIONS = [
   "How do I raise a Point of Inquiry?",
@@ -31,6 +33,7 @@ export default function ChatWidget() {
   const [showTeaser, setShowTeaser] = useState(false);
   const [teaserIndex, setTeaserIndex] = useState(0);
   const [teaserDismissed, setTeaserDismissed] = useState(false);
+  const [listening, setListening] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Animated intro: the teaser bubble appears a couple seconds after load,
@@ -94,6 +97,23 @@ export default function ChatWidget() {
     setOpen(true);
     setShowTeaser(false);
     setTeaserDismissed(true);
+  }
+
+  function listen() {
+    const Recognition = (window as VoiceWindow).SpeechRecognition || (window as VoiceWindow).webkitSpeechRecognition;
+    if (!Recognition) {
+      setMessages((m) => [...m, { role: "assistant", content: "Voice input is not supported in this browser. Try Chrome or Edge, or type your question instead." }]);
+      return;
+    }
+    const recognition = new Recognition();
+    recognition.lang = "en-IN";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => setListening(false);
+    recognition.onresult = (event) => setInput(event.results[0][0].transcript);
+    recognition.start();
   }
 
   return (
@@ -315,6 +335,9 @@ export default function ChatWidget() {
               }}
             >
               Send
+            </button>
+            <button onClick={listen} disabled={loading || listening} aria-label="Speak your question" className="mono" style={{ background: listening ? "var(--coral)" : "rgba(234,217,222,0.12)", color: "var(--text)", border: "none", minWidth: 40, borderRadius: 6, cursor: "pointer" }}>
+              {listening ? "…" : "◉"}
             </button>
           </div>
         </div>
