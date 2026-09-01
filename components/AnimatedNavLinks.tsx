@@ -41,6 +41,13 @@ export default function AnimatedNavLinks({ isLoggedIn }: { isLoggedIn: boolean }
         </motion.div>
       ))}
       {isLoggedIn && (
+        <motion.div variants={item}>
+          <Link href="/inbox" className="munlocked-nav-link" style={{ color: "var(--coral)", textDecoration: "none", fontWeight: 700 }}>
+            Inbox
+          </Link>
+        </motion.div>
+      )}
+      {isLoggedIn && (
         <motion.form variants={item} action={signOutAction}>
           <button type="submit" className="munlocked-nav-link mono" style={{ color: "var(--text)", opacity: 0.7, background: "none", border: "none", cursor: "pointer", padding: 0, font: "inherit" }}>
             Sign out
