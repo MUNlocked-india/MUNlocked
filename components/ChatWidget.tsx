@@ -1,348 +1,87 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport, type UIMessage } from "ai";
 
-type Msg = { role: "user" | "assistant"; content: string };
 type VoiceRecognition = { lang: string; interimResults: boolean; maxAlternatives: number; start: () => void; onstart: (() => void) | null; onend: (() => void) | null; onerror: (() => void) | null; onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null };
 type VoiceWindow = Window & typeof globalThis & { SpeechRecognition?: new () => VoiceRecognition; webkitSpeechRecognition?: new () => VoiceRecognition };
 
+const WELCOME: UIMessage = { id: "munlocked-welcome", role: "assistant", parts: [{ type: "text", text: "I’m MUNlocked — your committee co-pilot. I can help you turn an agenda into a sharp speech, prepare POIs, choose a motion, or run a calmer dais." }] };
 const SUGGESTIONS = [
-  { label: "Draft a speech", prompt: "Help me draft a confident 60-second GSL opening speech. First ask for my country, committee, agenda and position." },
-  { label: "Build POIs", prompt: "Help me prepare 5 sharp Points of Information. First ask for the committee, agenda and the country I am questioning." },
-  { label: "Caucus strategy", prompt: "Help me choose a moderated caucus topic and strategy. First ask for my committee, agenda and country position." },
-  { label: "Procedure coach", prompt: "Explain the key motions and points I need for a first MUN, with sample lines I can actually say in committee." },
-];
+  ["Build my opening", "Help me build a confident 60-second GSL. Ask for my country, committee, agenda, and position first."],
+  ["Prepare POIs", "Help me prepare five substantive POIs. Ask which country I am questioning, the committee, and agenda first."],
+  ["Pick a caucus", "Help me choose a moderated caucus topic that moves debate forward. Ask for the agenda and my bloc's goal first."],
+  ["Chair the room", "Give me a concise chair script to move from GSL into a moderated caucus, including timing and vote wording."],
+] as const;
 
-const TEASER_LINES = [
-  "How do I raise a Point of Inquiry?",
-  "Help me structure a GSL speech.",
-  "What's a moderated caucus?",
-  "Explain a Point of Order.",
-];
+function messageText(message: UIMessage) {
+  return message.parts.filter((part) => part.type === "text").map((part) => part.text).join("");
+}
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Msg[]>([
-    {
-      role: "assistant",
-      content:
-        "Hi, I'm the MUNlocked Assistant. Ask me about points and motions, how to write a POI, speech structure, or anything about committee procedure.",
-    },
-  ]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [showTeaser, setShowTeaser] = useState(false);
-  const [teaserIndex, setTeaserIndex] = useState(0);
-  const [teaserDismissed, setTeaserDismissed] = useState(false);
   const [listening, setListening] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [showTeaser, setShowTeaser] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Animated intro: the teaser bubble appears a couple seconds after load,
-  // then cycles through a few example questions on a timer — a lightweight
-  // "motion graphic" that shows what the assistant is for without forcing
-  // the user to open it first.
-  useEffect(() => {
-    const showTimer = setTimeout(() => setShowTeaser(true), 1800);
-    return () => clearTimeout(showTimer);
-  }, []);
+  const transport = useMemo(() => new DefaultChatTransport({ api: "/api/chat" }), []);
+  const { messages, sendMessage, setMessages, status, stop, error } = useChat({ messages: [WELCOME], transport });
+  const busy = status === "submitted" || status === "streaming";
 
   useEffect(() => {
-    if (!showTeaser || teaserDismissed) return;
-    const cycle = setInterval(() => {
-      setTeaserIndex((i) => (i + 1) % TEASER_LINES.length);
-    }, 3200);
-    const autoHide = setTimeout(() => setShowTeaser(false), 16000);
-    return () => {
-      clearInterval(cycle);
-      clearTimeout(autoHide);
-    };
-  }, [showTeaser, teaserDismissed]);
+    const timer = window.setTimeout(() => !open && setShowTeaser(true), 1800);
+    return () => window.clearTimeout(timer);
+  }, [open]);
 
-  function scrollToBottom() {
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-    });
-  }
+  useEffect(() => {
+    requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }));
+  }, [messages, busy]);
 
   async function send(text: string) {
-    if (!text.trim() || loading) return;
-    const next: Msg[] = [...messages, { role: "user", content: text }];
-    setMessages(next);
+    const clean = text.trim();
+    if (!clean || busy) return;
     setInput("");
-    setLoading(true);
-    scrollToBottom();
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next }),
-      });
-      const data = await res.json();
-      const reply: string = res.ok
-        ? data.reply
-        : "I couldn't reach the assistant right now. Please try again in a moment.";
-      setMessages((m) => [...m, { role: "assistant", content: reply }]);
-    } catch {
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: "I couldn't reach the assistant right now. Please try again in a moment." },
-      ]);
-    } finally {
-      setLoading(false);
-      scrollToBottom();
-    }
-  }
-
-  function openChat() {
-    setOpen(true);
-    setShowTeaser(false);
-    setTeaserDismissed(true);
+    setNotice("");
+    await sendMessage({ text: clean });
   }
 
   function listen() {
     const Recognition = (window as VoiceWindow).SpeechRecognition || (window as VoiceWindow).webkitSpeechRecognition;
-    if (!Recognition) {
-      setMessages((m) => [...m, { role: "assistant", content: "Voice input is not supported in this browser. Try Chrome or Edge, or type your question instead." }]);
-      return;
-    }
+    if (!Recognition) { setNotice("Voice input works in Chrome or Edge. You can still type your question."); return; }
     const recognition = new Recognition();
     recognition.lang = "en-IN";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     recognition.onstart = () => setListening(true);
     recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
+    recognition.onerror = () => { setListening(false); setNotice("I couldn’t hear that. Try again or type it out."); };
     recognition.onresult = (event) => setInput(event.results[0][0].transcript);
     recognition.start();
   }
 
-  return (
-    <>
-      <style>{`
-        @keyframes munlocked-pulse-ring {
-          0% { box-shadow: 0 0 0 0 rgba(201,138,148,0.55), 0 10px 30px rgba(0,0,0,0.5); }
-          70% { box-shadow: 0 0 0 16px rgba(201,138,148,0), 0 10px 30px rgba(0,0,0,0.5); }
-          100% { box-shadow: 0 0 0 0 rgba(201,138,148,0), 0 10px 30px rgba(0,0,0,0.5); }
-        }
-        @keyframes munlocked-teaser-in {
-          from { opacity: 0; transform: translateY(8px) scale(0.97); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes munlocked-line-fade {
-          0%, 100% { opacity: 0; transform: translateY(4px); }
-          8%, 88% { opacity: 1; transform: translateY(0); }
-        }
-        .munlocked-chat-btn { animation: munlocked-pulse-ring 2.6s ease-out infinite; }
-        .munlocked-teaser { animation: munlocked-teaser-in 0.4s ease forwards; }
-        .munlocked-teaser-line { animation: munlocked-line-fade 3.2s ease forwards; }
-      `}</style>
-
-      {showTeaser && !open && (
-        <div
-          className="munlocked-teaser"
-          style={{
-            position: "fixed",
-            bottom: 100,
-            right: 28,
-            zIndex: 99,
-            maxWidth: 260,
-            background: "#0F0F10",
-            border: "1px solid rgba(201,138,148,0.35)",
-            borderRadius: 12,
-            padding: "14px 16px",
-            boxShadow: "0 14px 40px rgba(0,0,0,0.55)",
-          }}
-        >
-          <button
-            onClick={() => { setShowTeaser(false); setTeaserDismissed(true); }}
-            aria-label="Dismiss"
-            style={{ position: "absolute", top: 8, right: 10, background: "none", border: "none", color: "rgba(234,217,222,0.4)", fontSize: 13, cursor: "pointer" }}
-          >
-            ✕
-          </button>
-          <div className="mono" style={{ fontSize: 9.5, letterSpacing: 1, textTransform: "uppercase", color: "var(--coral)", marginBottom: 8 }}>
-            MUNlocked Assistant
-          </div>
-          <div key={teaserIndex} className="munlocked-teaser-line" style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5, minHeight: 36 }}>
-            &ldquo;{TEASER_LINES[teaserIndex]}&rdquo;
-          </div>
-          <button
-            onClick={openChat}
-            className="mono"
-            style={{ marginTop: 10, background: "var(--paper)", color: "var(--ink)", border: "none", padding: "7px 12px", borderRadius: 20, fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", cursor: "pointer" }}
-          >
-            Ask me anything →
-          </button>
-        </div>
-      )}
-
-      <button
-        onClick={() => (open ? setOpen(false) : openChat())}
-        aria-label="Open MUNlocked Assistant"
-        className={!open ? "munlocked-chat-btn" : ""}
-        style={{
-          position: "fixed",
-          bottom: 28,
-          right: 28,
-          height: 54,
-          padding: open ? 0 : "0 20px 0 16px",
-          width: open ? 54 : "auto",
-          borderRadius: 999,
-          background: "linear-gradient(135deg, var(--paper), var(--coral))",
-          color: "var(--ink)",
-          border: "none",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          cursor: "pointer",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-          zIndex: 100,
-          fontWeight: 700,
-          fontFamily: "IBM Plex Mono, monospace",
-          fontSize: 12,
-          textTransform: "uppercase",
-          letterSpacing: 0.5,
-        }}
-      >
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <path d="M21 12c0 4.4-4 8-9 8-1.2 0-2.4-.2-3.4-.6L3 21l1.7-4.4C3.6 15.2 3 13.7 3 12c0-4.4 4-8 9-8s9 3.6 9 8z" />
-          <circle cx="8.5" cy="12" r="1" />
-          <circle cx="12" cy="12" r="1" />
-          <circle cx="15.5" cy="12" r="1" />
-        </svg>
-        {!open && "Ask MUNlocked"}
-      </button>
-
-      {open && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 98,
-            right: 28,
-            width: 370,
-            maxWidth: "calc(100vw - 40px)",
-            height: 500,
-            maxHeight: "calc(100vh - 150px)",
-            background: "#0F0F10",
-            border: "1px solid rgba(201,138,148,0.3)",
-            borderRadius: 12,
-            boxShadow: "0 20px 60px rgba(0,0,0,0.65)",
-            zIndex: 100,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-          }}
-        >
-          <div style={{ background: "linear-gradient(135deg, rgba(201,138,148,0.16), var(--ink))", borderBottom: "1px solid rgba(234,217,222,0.1)", padding: "16px 18px", display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--coral)", flexShrink: 0, boxShadow: "0 0 8px var(--coral)" }} />
-            <div className="mono">
-              <b style={{ display: "block", fontSize: 13.5, color: "var(--text)" }}>MUNlocked Assistant</b>
-              <span style={{ fontSize: 10, color: "rgba(234,217,222,0.5)", textTransform: "uppercase", letterSpacing: 1 }}>
-                Procedure &amp; MUN Basics
-              </span>
-            </div>
-            <button
-              onClick={() => setOpen(false)}
-              style={{ marginLeft: "auto", background: "none", border: "none", color: "rgba(234,217,222,0.5)", fontSize: 18, cursor: "pointer" }}
-            >
-              ✕
-            </button>
-          </div>
-
-          <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "16px 16px 6px", display: "flex", flexDirection: "column", gap: 12 }}>
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                style={{
-                  maxWidth: "85%",
-                  fontSize: 13,
-                  lineHeight: 1.55,
-                  padding: "10px 13px",
-                  borderRadius: 10,
-                  whiteSpace: "pre-wrap",
-                  alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                  background: m.role === "user" ? "var(--paper)" : "rgba(234,217,222,0.08)",
-                  color: m.role === "user" ? "var(--ink)" : "var(--text)",
-                  borderBottomRightRadius: m.role === "user" ? 2 : 10,
-                  borderBottomLeftRadius: m.role === "user" ? 10 : 2,
-                }}
-              >
-                {m.content}
-              </div>
-            ))}
-            {loading && (
-              <div className="mono" style={{ fontSize: 11, color: "rgba(234,217,222,0.4)" }}>
-                Thinking…
-              </div>
-            )}
-          </div>
-
-          {messages.length === 1 && (
-            <div style={{ display: "flex", gap: 6, padding: "0 16px 10px", flexWrap: "wrap" }}>
-              {SUGGESTIONS.map((suggestion) => (
-                <button
-                  key={suggestion.label}
-                  onClick={() => send(suggestion.prompt)}
-                  className="mono"
-                  style={{
-                    background: "none",
-                    border: "1px solid rgba(234,217,222,0.2)",
-                    color: "rgba(234,217,222,0.7)",
-                    fontSize: 10,
-                    padding: "6px 10px",
-                    borderRadius: 20,
-                    cursor: "pointer",
-                  }}
-                >
-                  {suggestion.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div style={{ borderTop: "1px solid rgba(234,217,222,0.1)", padding: 12, display: "flex", gap: 8 }}>
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && send(input)}
-              placeholder="Ask about POIs, motions, speeches…"
-              style={{
-                flex: 1,
-                background: "#1A1A1B",
-                border: "1px solid rgba(234,217,222,0.15)",
-                color: "var(--text)",
-                padding: "10px 12px",
-                borderRadius: 6,
-                fontSize: 13,
-              }}
-            />
-            <button
-              onClick={() => send(input)}
-              disabled={loading}
-              className="mono"
-              style={{
-                background: "var(--paper)",
-                color: "var(--ink)",
-                border: "none",
-                padding: "0 16px",
-                borderRadius: 6,
-                fontSize: 11,
-                fontWeight: 600,
-                textTransform: "uppercase",
-                cursor: "pointer",
-              }}
-            >
-              Send
-            </button>
-            <button onClick={listen} disabled={loading || listening} aria-label="Speak your question" className="mono" style={{ background: listening ? "var(--coral)" : "rgba(234,217,222,0.12)", color: "var(--text)", border: "none", minWidth: 40, borderRadius: 6, cursor: "pointer" }}>
-              {listening ? "…" : "◉"}
-            </button>
-          </div>
-        </div>
-      )}
-    </>
-  );
+  return <>
+    <style>{`
+      @keyframes munOrbit { to { transform: rotate(360deg); } }
+      @keyframes munRise { from { opacity:0; transform:translateY(12px) scale(.97) } to { opacity:1; transform:translateY(0) scale(1) } }
+      @keyframes munThinking { 0%,100% { opacity:.3; transform:translateY(0) } 50% { opacity:1; transform:translateY(-4px) } }
+      .mun-chat-launch { box-shadow:0 12px 36px rgba(0,0,0,.48); } .mun-chat-launch:before { content:""; position:absolute; inset:-5px; border-radius:inherit; border:1px solid rgba(201,138,148,.45); animation:munOrbit 5s linear infinite; border-left-color:transparent; border-bottom-color:transparent; }
+      .mun-chat-panel,.mun-chat-teaser { animation:munRise .34s cubic-bezier(.2,.85,.3,1) both; }
+      .mun-chat-suggestion:hover { transform:translateY(-2px); border-color:rgba(201,138,148,.6)!important; color:var(--text)!important; }
+      @media (prefers-reduced-motion: reduce){ .mun-chat-launch:before,.mun-chat-panel,.mun-chat-teaser{animation:none!important} }
+    `}</style>
+    {showTeaser && !open && <div className="mun-chat-teaser" style={{ position: "fixed", right: 28, bottom: 100, maxWidth: 270, zIndex: 100, padding: "14px 16px", borderRadius: 13, background: "#101114", border: "1px solid rgba(201,138,148,.32)", boxShadow: "0 16px 45px rgba(0,0,0,.55)" }}><button onClick={() => setShowTeaser(false)} aria-label="Dismiss MUNlocked prompt" style={{ position: "absolute", top: 6, right: 9, border: 0, background: "transparent", color: "rgba(234,217,222,.48)", cursor: "pointer" }}>×</button><div className="mono" style={{ color: "var(--coral)", fontSize: 9, letterSpacing: 1.4, textTransform: "uppercase", marginBottom: 7 }}>MUNlocked is ready</div><p style={{ color: "var(--text)", fontSize: 13, lineHeight: 1.5 }}>Need a motion, a speech, or a way through committee? Ask me.</p><button onClick={() => { setOpen(true); setShowTeaser(false); }} className="mono" style={{ marginTop: 10, border: 0, borderRadius: 99, background: "var(--paper)", color: "var(--ink)", padding: "7px 11px", cursor: "pointer", fontSize: 10, fontWeight: 800, textTransform: "uppercase" }}>Open MUNlocked →</button></div>}
+    <button onClick={() => { setOpen((value) => !value); setShowTeaser(false); }} aria-label="Open MUNlocked" className="mun-chat-launch" style={{ position: "fixed", right: 28, bottom: 28, zIndex: 101, height: 54, padding: open ? 0 : "0 19px 0 16px", width: open ? 54 : "auto", border: 0, borderRadius: 999, background: "linear-gradient(135deg,var(--paper),var(--coral))", color: "var(--ink)", display: "flex", gap: 8, alignItems: "center", justifyContent: "center", cursor: "pointer", fontFamily: "Courier New,monospace", fontWeight: 800, fontSize: 11, letterSpacing: .35, textTransform: "uppercase" }}><span style={{ position: "relative", fontSize: 19, lineHeight: 1 }}>{open ? "×" : "✦"}</span>{!open && "MUNlocked"}</button>
+    {open && <section className="mun-chat-panel" aria-label="MUNlocked chat" style={{ position: "fixed", zIndex: 100, right: 28, bottom: 98, width: 410, maxWidth: "calc(100vw - 32px)", height: 570, maxHeight: "calc(100vh - 125px)", display: "flex", flexDirection: "column", overflow: "hidden", borderRadius: 17, background: "#101114", border: "1px solid rgba(201,138,148,.34)", boxShadow: "0 25px 70px rgba(0,0,0,.68)" }}>
+      <header style={{ padding: "17px 18px 15px", background: "linear-gradient(120deg,rgba(201,138,148,.2),rgba(16,17,20,.6))", borderBottom: "1px solid rgba(234,217,222,.1)", display: "flex", gap: 11, alignItems: "center" }}><div style={{ width: 31, height: 31, borderRadius: 10, background: "var(--paper)", color: "var(--ink)", display: "grid", placeItems: "center", fontWeight: 800 }}>M</div><div><strong style={{ display: "block", color: "var(--text)", fontSize: 15 }}>MUNlocked</strong><span className="mono" style={{ fontSize: 9, color: "rgba(234,217,222,.56)", letterSpacing: 1, textTransform: "uppercase" }}>Your live MUN co-pilot</span></div><span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5, color: "#7FA96B", fontSize: 10 }}><i style={{ width: 7, height: 7, borderRadius: "50%", background: "#7FA96B", boxShadow: "0 0 10px #7FA96B" }} />Online</span></header>
+      <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: 11 }}>
+        {messages.map((message) => { const content = messageText(message); if (!content) return null; const user = message.role === "user"; return <div key={message.id} style={{ maxWidth: "88%", alignSelf: user ? "flex-end" : "flex-start", padding: "10px 12px", borderRadius: user ? "12px 12px 3px 12px" : "12px 12px 12px 3px", background: user ? "var(--paper)" : "rgba(234,217,222,.075)", color: user ? "var(--ink)" : "var(--text)", fontSize: 13, lineHeight: 1.58, whiteSpace: "pre-wrap" }}>{content}</div>; })}
+        {busy && <div style={{ display: "flex", gap: 5, alignItems: "center", color: "rgba(234,217,222,.55)", fontSize: 11 }}><span style={{ animation: "munThinking .8s ease infinite" }}>●</span><span style={{ animation: "munThinking .8s .12s ease infinite" }}>●</span><span style={{ animation: "munThinking .8s .24s ease infinite" }}>●</span><span className="mono" style={{ marginLeft: 4, fontSize: 9 }}>MUNlocked is thinking</span></div>}
+        {error && <p style={{ color: "#e59aa8", fontSize: 11 }}>MUNlocked couldn’t respond just now. Try again in a moment.</p>}
+      </div>
+      {messages.length <= 1 && <div style={{ padding: "0 16px 12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>{SUGGESTIONS.map(([label, prompt]) => <button key={label} disabled={busy} onClick={() => send(prompt)} className="mun-chat-suggestion" style={{ textAlign: "left", background: "rgba(234,217,222,.035)", color: "rgba(234,217,222,.72)", border: "1px solid rgba(234,217,222,.14)", borderRadius: 8, padding: "8px 9px", cursor: "pointer", fontSize: 10.5, transition: "transform .2s ease,border-color .2s ease,color .2s ease" }}>{label} <span style={{ color: "var(--coral)" }}>↗</span></button>)}</div>}
+      <footer style={{ borderTop: "1px solid rgba(234,217,222,.1)", padding: 12 }}><div style={{ display: "flex", gap: 7 }}><input value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(input); } }} placeholder="Ask about speeches, POIs, motions…" aria-label="Message MUNlocked" style={{ flex: 1, minWidth: 0, background: "#191a1d", border: "1px solid rgba(234,217,222,.15)", color: "var(--text)", padding: "11px 12px", borderRadius: 8, fontSize: 12.5 }} /><button onClick={listen} disabled={busy || listening} aria-label="Use voice input" style={{ width: 40, border: 0, borderRadius: 8, background: listening ? "var(--coral)" : "rgba(234,217,222,.1)", color: "var(--text)", cursor: "pointer" }}>{listening ? "…" : "◉"}</button>{busy ? <button onClick={stop} className="mono" style={{ border: "1px solid rgba(234,217,222,.25)", borderRadius: 8, background: "transparent", color: "var(--text)", padding: "0 11px", cursor: "pointer", fontSize: 9 }}>Stop</button> : <button onClick={() => send(input)} className="mono" style={{ border: 0, borderRadius: 8, background: "var(--paper)", color: "var(--ink)", padding: "0 12px", cursor: "pointer", fontSize: 10, fontWeight: 800 }}>Send</button>}</div><div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8 }}><span style={{ color: "rgba(234,217,222,.35)", fontSize: 9.5 }}>{notice || "Procedure varies by conference — check your RoP."}</span><button onClick={() => { stop(); setMessages([WELCOME]); setNotice(""); }} className="mono" style={{ border: 0, background: "transparent", color: "rgba(234,217,222,.43)", cursor: "pointer", fontSize: 9 }}>New chat</button></div></footer>
+    </section>}
+  </>;
 }
