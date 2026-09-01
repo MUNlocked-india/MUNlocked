@@ -140,6 +140,7 @@ export async function updateMarks(committeeId: string, columnKeys: string[], for
     .update({
       custom_scores: scores,
       notes: String(formData.get("notes") || ""),
+      award: String(formData.get("award") || ""),
       updated_by: user.id,
       updated_at: new Date().toISOString(),
     })

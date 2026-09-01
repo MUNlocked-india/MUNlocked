@@ -49,7 +49,7 @@ export default async function CommitteePage({
 
   const { data: delegates } = await supabase
     .from("delegates")
-    .select("id, country, delegate_name, marks(custom_scores, notes)")
+    .select("id, country, delegate_name, marks(custom_scores, notes, award)")
     .eq("committee_id", id)
     .order("country", { ascending: true });
 
@@ -203,6 +203,7 @@ export default async function CommitteePage({
                       </th>
                     ))}
                     <th style={thStyle}>Notes</th>
+                    <th style={thStyle}>Award</th>
                     <th style={thStyle}></th>
                   </tr>
                 </thead>
@@ -235,6 +236,11 @@ export default async function CommitteePage({
                           <input type="text" name="notes" form={`form-${d.id}`} defaultValue={m?.notes ?? ""} placeholder="—" style={notesInputStyle} />
                         </td>
                         <td style={tdStyle}>
+                          <select name="award" form={`form-${d.id}`} defaultValue={m?.award ?? ""} style={{ ...notesInputStyle, width: 150 }}>
+                            <option value="">—</option><option>Best Delegate</option><option>High Commendation</option><option>Special Mention</option><option>Verbal Mention</option>
+                          </select>
+                        </td>
+                        <td style={tdStyle}>
                           <div style={{ display: "flex", gap: 6 }}>
                             <button type="submit" form={`form-${d.id}`} className="mono" style={saveBtnStyle}>Save</button>
                             <form action={boundRemove}>
@@ -255,6 +261,7 @@ export default async function CommitteePage({
                         {totals[c.key]}
                       </td>
                     ))}
+                    <td style={tdStyle}></td>
                     <td style={tdStyle}></td>
                     <td style={tdStyle}></td>
                   </tr>
