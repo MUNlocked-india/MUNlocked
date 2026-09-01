@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { COUNTRY_BUNDLES } from "@/lib/countryBundles";
+import { sendEmail } from "@/lib/email";
 
 async function requireUser() {
   const supabase = await createClient();
@@ -23,6 +24,13 @@ export async function inviteCoChair(committeeId: string, formData: FormData) {
     committee_id: committeeId,
     email,
     role: "co_chair",
+  });
+
+  const { data: committee } = await supabase.from("committees").select("name, code").eq("id", committeeId).single();
+  await sendEmail({
+    to: email,
+    subject: `You were added to the dais for ${committee?.name ?? "a MUNlocked committee"}`,
+    text: `You have been invited as a co-chair to ${committee?.name ?? committee?.code ?? "a committee"}. Sign in to MUNlocked to access the live marksheet: ${process.env.NEXT_PUBLIC_APP_URL ?? "https://munlockedindia.vercel.app"}/committees/${committeeId}`,
   });
 
   revalidatePath(`/committees/${committeeId}`);
