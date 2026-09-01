@@ -5,10 +5,10 @@ const SYSTEM_PROMPT = `You are the MUNlocked Assistant, embedded on the MUNlocke
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
 export async function POST(request: Request) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "Server is missing ANTHROPIC_API_KEY. Add it to your environment variables." },
+      { error: "Server is missing OPENAI_API_KEY. Add it to your environment variables." },
       { status: 500 }
     );
   }
@@ -32,18 +32,20 @@ export async function POST(request: Request) {
   }));
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "claude-sonnet-5",
-        max_tokens: 500,
-        system: SYSTEM_PROMPT,
-        messages: trimmed,
+        model: "gpt-5-mini",
+        max_output_tokens: 500,
+        instructions: SYSTEM_PROMPT,
+        input: trimmed.map((message) => ({
+          role: message.role,
+          content: [{ type: "input_text", text: message.content }],
+        })),
       }),
     });
 
@@ -56,16 +58,12 @@ export async function POST(request: Request) {
     }
 
     const data = await response.json();
-    const reply =
-      (data.content || [])
-        .map((block: { text?: string }) => block.text || "")
-        .filter(Boolean)
-        .join("\n") || "Sorry, I couldn't process that — try asking again.";
+    const reply = data.output_text || "Sorry, I couldn't process that — try asking again.";
 
     return NextResponse.json({ reply });
   } catch {
     return NextResponse.json(
-      { error: "Failed to reach the Anthropic API." },
+      { error: "Failed to reach the OpenAI API." },
       { status: 502 }
     );
   }

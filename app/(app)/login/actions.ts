@@ -21,7 +21,7 @@ export async function loginAction(formData: FormData) {
   // part of the auth-critical path.
   notifyAdmin("Successful login", `${email} just logged in to MUNlocked.`).catch(() => {});
 
-  redirect("/dashboard");
+  redirect("/");
 }
 
 export async function resendConfirmationAction(formData: FormData) {
