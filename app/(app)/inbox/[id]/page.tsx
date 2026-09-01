@@ -11,12 +11,12 @@ async function reply(conversationId: string, formData: FormData) {
   if (!user) redirect("/login");
   const body = String(formData.get("body") || "").trim();
   if (!body) return;
-  const { data: conversation } = await supabase.from("conversations").select("subject, organizer_id, eb_application_id, eb_applications(applicant_email, applicant_id)").eq("id", conversationId).single();
+  const { data: conversation } = await supabase.from("conversations").select("subject, organizer_id, organizer_email, eb_application_id, eb_applications(applicant_email, applicant_id)").eq("id", conversationId).single();
   const { error } = await supabase.from("messages").insert({ conversation_id: conversationId, sender_id: user.id, body });
   if (!error && conversation) {
     const eb = Array.isArray(conversation.eb_applications) ? conversation.eb_applications[0] : conversation.eb_applications;
-    const target = user.id === conversation.organizer_id ? eb?.applicant_email : null;
-    if (target) await sendEmail({ to: target, subject: `New reply: ${conversation.subject}`, text: "You have a new reply in your MUNlocked Inbox." });
+    const target = user.id === conversation.organizer_id ? eb?.applicant_email : conversation.organizer_email;
+    if (target) await sendEmail({ to: target, subject: `New reply: ${conversation.subject}`, text: "You have a new reply in your MUNlocked Inbox. Sign in to read and respond." });
   }
   revalidatePath(`/inbox/${conversationId}`);
 }
