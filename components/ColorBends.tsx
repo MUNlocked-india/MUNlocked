@@ -13,10 +13,10 @@ const fragmentShader = `
   varying vec2 vUv;
 
   vec3 palette(float t) {
-    vec3 a = vec3(0.08, 0.04, 0.12);
-    vec3 b = vec3(0.72, 0.25, 0.44);
-    vec3 c = vec3(0.75, 0.48, 0.22);
-    vec3 d = vec3(0.48, 0.18, 0.55);
+    vec3 a = vec3(0.01, 0.01, 0.01);
+    vec3 b = vec3(0.11, 0.11, 0.12);
+    vec3 c = vec3(0.68, 0.68, 0.68);
+    vec3 d = vec3(0.08, 0.12, 0.18);
     return a + b * cos(6.28318 * (c * t + d));
   }
 
