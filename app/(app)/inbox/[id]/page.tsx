@@ -29,6 +29,13 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
   const { data: conversation } = await supabase.from("conversations").select("id, subject, created_at").eq("id", id).single();
   if (!conversation) redirect("/inbox");
   const { data: messages } = await supabase.from("messages").select("id, sender_id, body, created_at").eq("conversation_id", id).order("created_at");
+  const unreadIds = (messages ?? []).filter((message) => message.sender_id !== user.id).map((message) => message.id);
+  if (unreadIds.length) {
+    await supabase.from("message_reads").upsert(
+      unreadIds.map((messageId) => ({ message_id: messageId, reader_id: user.id })),
+      { onConflict: "message_id,reader_id", ignoreDuplicates: true }
+    );
+  }
   const boundReply = reply.bind(null, id);
   return <div style={{ minHeight:"100vh", padding:"52px 24px" }}><div style={{ maxWidth:760, margin:"0 auto" }}><Link href="/inbox" className="mono" style={{ fontSize:11, color:"var(--coral)" }}>← BACK TO INBOX</Link><h1 style={{ fontFamily:"Georgia,serif", fontSize:30, margin:"18px 0 22px" }}>{conversation.subject}</h1><div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:22 }}>{messages?.map(m => <div key={m.id} style={{ alignSelf:m.sender_id===user.id?"flex-end":"flex-start", maxWidth:"82%", padding:"12px 14px", background:m.sender_id===user.id?"var(--paper)":"#151515", color:m.sender_id===user.id?"var(--ink)":"var(--text)", borderRadius:10, lineHeight:1.55 }}>{m.body}<div className="mono" style={{ marginTop:7, fontSize:9, opacity:.5 }}>{new Date(m.created_at).toLocaleString()}</div></div>)}</div><form action={boundReply} style={{ display:"flex", gap:10 }}><textarea name="body" required rows={3} placeholder="Write a reply…" style={{ flex:1, padding:12, borderRadius:8, resize:"vertical" }}/><button className="submit" style={{ width:"auto", padding:"0 18px" }}>Reply</button></form></div></div>;
 }
