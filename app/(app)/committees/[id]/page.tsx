@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { COUNTRY_BUNDLES } from "@/lib/countryBundles";
 import RenameColumnInput from "@/components/RenameColumnInput";
-import SpeechTimer from "@/components/SpeechTimer";
+import SessionTimerDesk from "@/components/SessionTimerDesk";
 import ExportMarksheet from "@/components/ExportMarksheet";
 import {
   inviteCoChair,
@@ -87,15 +87,17 @@ export default async function CommitteePage({
     }
   });
 
-  const exportHeaders = ["Country", ...cols.map((column) => column.label), "Notes", "Award"];
+  const exportHeaders = ["Country", ...cols.map((column) => column.label), "Total", "Notes", "Award"];
   const exportRows = (delegates ?? []).map((delegate) => {
     const mark = Array.isArray(delegate.marks) ? delegate.marks[0] : delegate.marks;
     const scores = (mark?.custom_scores ?? {}) as Record<string, number>;
-    return [delegate.country, ...cols.map((column) => Number(scores[column.key] ?? 0)), mark?.notes ?? "", mark?.award ?? ""];
+    const rowTotal = cols.reduce((sum, column) => sum + Number(scores[column.key] ?? 0), 0);
+    return [delegate.country, ...cols.map((column) => Number(scores[column.key] ?? 0)), rowTotal, mark?.notes ?? "", mark?.award ?? ""];
   });
 
   return (
     <div style={{ minHeight: "100vh", padding: "48px 24px 120px" }}>
+      <style>{`@media (max-width: 700px) { .marks-summary { grid-template-columns: 1fr !important; } .marks-workspace { grid-template-columns: 1fr !important; } .marks-sidebar { position: static !important; } }`}</style>
       <div style={{ maxWidth: 1300, margin: "0 auto" }}>
         <div className="mono" style={{ fontSize: 11, letterSpacing: 2, color: "var(--coral)", textTransform: "uppercase", marginBottom: 10 }}>
           File No. IN/MUN/MARKSHEET/{committee!.code}
@@ -107,9 +109,19 @@ export default async function CommitteePage({
           <p className="mono" style={{ fontSize: 12, color: "rgba(234,217,222,0.55)", marginBottom: 30 }}>{committee!.conference_name}</p>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 24, alignItems: "flex-start" }}>
+        <div className="marks-summary" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 12, marginBottom: 18 }}>
+          {[
+            ["ACTIVE PORTFOLIOS", String(delegates?.length ?? 0), "Live scoring roster"],
+            ["SCORING SIGNALS", String(cols.length), "SIS/HCC grading columns"],
+            ["LEADING DELEGATE", bestDelegateId ? (delegates?.find((delegate) => delegate.id === bestDelegateId)?.country ?? "—") : "—", bestDelegateId ? `${bestDelegateTotal.toFixed(1)} recorded points` : "Scores will reveal the lead"],
+          ].map(([label, value, hint]) => <div key={label} style={{ position: "relative", overflow: "hidden", background: "linear-gradient(135deg, rgba(201,138,148,.15), rgba(16,16,17,.94) 70%)", border: "1px solid rgba(234,217,222,.13)", borderRadius: 13, padding: "15px 16px" }}><div className="mono" style={{ fontSize: 9, color: "var(--coral)", letterSpacing: 1.2, marginBottom: 7 }}>{label}</div><strong style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "Georgia, serif", fontSize: 20, color: "var(--text)" }}>{value}</strong><span style={{ fontSize: 10.5, color: "rgba(234,217,222,.45)" }}>{hint}</span></div>)}
+        </div>
+
+        <SessionTimerDesk />
+
+        <div className="marks-workspace" style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 24, alignItems: "flex-start" }}>
           {/* ---------- LEFT SIDEBAR: roster tools ---------- */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 18, position: "sticky", top: 20 }}>
+          <div className="marks-sidebar" style={{ display: "flex", flexDirection: "column", gap: 18, position: "sticky", top: 20 }}>
             <div style={{ background: "#0F0F10", border: "1px solid rgba(234,217,222,0.1)", borderRadius: 14, padding: 20 }}>
               <h2 style={{ fontFamily: "Georgia, serif", fontSize: 15, marginBottom: 12 }}>Quick-Add Bundles</h2>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -216,6 +228,7 @@ export default async function CommitteePage({
                         </div>
                       </th>
                     ))}
+                    <th style={{ ...thStyle, minWidth: 66 }}>Total</th>
                     <th style={thStyle}>Notes</th>
                     <th style={thStyle}>Award</th>
                     <th style={thStyle}></th>
@@ -225,6 +238,7 @@ export default async function CommitteePage({
                   {delegates.map((d) => {
                     const m = Array.isArray(d.marks) ? d.marks[0] : d.marks;
                     const scores = (m?.custom_scores ?? {}) as Record<string, number>;
+                    const rowTotal = cols.reduce((sum, column) => sum + Number(scores[column.key] ?? 0), 0);
                     const isBest = d.id === bestDelegateId;
                     return (
                       <tr key={d.id} style={isBest ? { background: "rgba(199,166,107,0.06)" } : undefined}>
@@ -246,6 +260,7 @@ export default async function CommitteePage({
                             />
                           </td>
                         ))}
+                        <td style={{ ...tdStyle, fontFamily: "IBM Plex Mono, monospace", color: isBest ? "var(--brass)" : "rgba(234,217,222,.72)", fontWeight: 700, textAlign: "center" }}>{rowTotal.toFixed(1)}</td>
                         <td style={tdStyle}>
                           <input type="text" name="notes" form={`form-${d.id}`} defaultValue={m?.notes ?? ""} placeholder="—" style={notesInputStyle} />
                         </td>
@@ -275,6 +290,7 @@ export default async function CommitteePage({
                         {totals[c.key]}
                       </td>
                     ))}
+                    <td style={{ ...tdStyle, color: "var(--brass)", fontFamily: "IBM Plex Mono, monospace", fontWeight: 700 }}>—</td>
                     <td style={tdStyle}></td>
                     <td style={tdStyle}></td>
                     <td style={tdStyle}></td>
@@ -289,7 +305,6 @@ export default async function CommitteePage({
           </div>
         </div>
       </div>
-      <SpeechTimer />
     </div>
   );
 }
