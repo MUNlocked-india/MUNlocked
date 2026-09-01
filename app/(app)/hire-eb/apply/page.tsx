@@ -10,6 +10,8 @@ async function submitApplication(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user!.id).single();
+
   const areas = String(formData.get("areas_of_expertise") || "")
     .split(",")
     .map((a) => a.trim())
@@ -40,6 +42,7 @@ async function submitApplication(formData: FormData) {
   const { error } = await supabase.from("eb_applications").insert({
     applicant_id: user!.id,
     applicant_email: user!.email,
+    display_name: profile?.full_name ?? user!.email,
     bio: String(formData.get("bio")),
     experience: String(formData.get("experience")),
     areas_of_expertise: areas,
@@ -76,7 +79,7 @@ export default async function ApplyEbPage({
         </div>
         <h1 style={{ fontFamily: "Georgia, serif", fontSize: 24, marginBottom: 6 }}>Apply as a Verified EB</h1>
         <p style={{ fontSize: 13, color: "rgba(7,7,7,0.6)", marginBottom: 20 }}>
-          An admin reviews every application before it's listed. Approved profiles show up in the public "Hire an EB" directory.
+          An admin reviews every application before it's listed. Once approved, your formal photo, name and CV/portfolio appear in the MUNlocked Hire an EB directory for members to review.
         </p>
 
         {params.success && <p className="success-text">Application submitted — it's now pending admin review.</p>}
@@ -91,7 +94,7 @@ export default async function ApplyEbPage({
 
         <label htmlFor="cv">CV / MUN Portfolio (PDF)</label>
         <input id="cv" name="cv" type="file" required accept="application/pdf" />
-        <p style={{ marginTop: -10, marginBottom: 16, fontSize: 12, color: "rgba(7,7,7,0.58)" }}>PDF · maximum 10 MB · private to MUNlocked review</p>
+        <p style={{ marginTop: -10, marginBottom: 16, fontSize: 12, color: "rgba(7,7,7,0.58)" }}>PDF · maximum 10 MB · shown in your member-visible profile only after approval</p>
 
         <label htmlFor="experience">MUN Experience</label>
         <textarea id="experience" name="experience" required rows={3} style={textareaStyle} placeholder="Committees chaired, conferences attended, notable achievements." />
