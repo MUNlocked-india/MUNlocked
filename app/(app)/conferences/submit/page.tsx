@@ -15,6 +15,18 @@ async function submitConference(formData: FormData) {
     .map((c) => c.trim())
     .filter(Boolean);
 
+  const logo = formData.get("logo");
+  let logoPath: string | null = null;
+  if (logo instanceof File && logo.size > 0) {
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'].includes(logo.type) || logo.size > 5 * 1024 * 1024) {
+      redirect(`/conferences/submit?error=${encodeURIComponent("Logo must be a JPG, PNG, WebP, or SVG under 5 MB.")}`);
+    }
+    const extension = logo.name.split(".").pop()?.toLowerCase() || "png";
+    logoPath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+    const { error: uploadError } = await supabase.storage.from("conference-assets").upload(logoPath, logo, { contentType: logo.type });
+    if (uploadError) redirect(`/conferences/submit?error=${encodeURIComponent(uploadError.message)}`);
+  }
+
   const { error } = await supabase.from("conferences").insert({
     submitted_by: user!.id,
     name: String(formData.get("name")),
@@ -26,6 +38,7 @@ async function submitConference(formData: FormData) {
     delegate_fee: formData.get("delegate_fee") ? Number(formData.get("delegate_fee")) : null,
     committees,
     registration_url: String(formData.get("registration_url") || "") || null,
+    logo_path: logoPath,
     status: "pending",
   });
 
@@ -50,7 +63,7 @@ export default async function SubmitConferencePage({
 
   return (
     <div className="auth-wrap" style={{ alignItems: "flex-start", paddingTop: 60 }}>
-      <form action={submitConference} className="auth-card" style={{ maxWidth: 520 }}>
+      <form action={submitConference} encType="multipart/form-data" className="auth-card" style={{ maxWidth: 520 }}>
         <div className="mono" style={{ fontSize: 11, letterSpacing: 2, color: "var(--coral)", marginBottom: 8, textTransform: "uppercase" }}>
           File No. IN/MUN/CONF-SUBMIT
         </div>
@@ -66,6 +79,10 @@ export default async function SubmitConferencePage({
 
         <label htmlFor="name">Conference Name</label>
         <input id="name" name="name" type="text" required />
+
+        <label htmlFor="logo">Conference Logo</label>
+        <input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" required />
+        <p style={{ marginTop: -10, marginBottom: 16, fontSize: 12, color: "rgba(7,7,7,0.58)" }}>JPG, PNG, WebP, or SVG · maximum 5 MB</p>
 
         <label htmlFor="secretariat">Organizing Secretariat</label>
         <input id="secretariat" name="secretariat" type="text" required placeholder="e.g. Stonehill International School MUN" />
