@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { COUNTRY_BUNDLES } from "@/lib/countryBundles";
 import RenameColumnInput from "@/components/RenameColumnInput";
 import SpeechTimer from "@/components/SpeechTimer";
+import ExportMarksheet from "@/components/ExportMarksheet";
 import {
   inviteCoChair,
   addDelegate,
@@ -86,6 +87,13 @@ export default async function CommitteePage({
     }
   });
 
+  const exportHeaders = ["Country", ...cols.map((column) => column.label), "Notes", "Award"];
+  const exportRows = (delegates ?? []).map((delegate) => {
+    const mark = Array.isArray(delegate.marks) ? delegate.marks[0] : delegate.marks;
+    const scores = (mark?.custom_scores ?? {}) as Record<string, number>;
+    return [delegate.country, ...cols.map((column) => Number(scores[column.key] ?? 0)), mark?.notes ?? "", mark?.award ?? ""];
+  });
+
   return (
     <div style={{ minHeight: "100vh", padding: "48px 24px 120px" }}>
       <div style={{ maxWidth: 1300, margin: "0 auto" }}>
@@ -126,6 +134,12 @@ export default async function CommitteePage({
                   Add
                 </button>
               </form>
+            </div>
+
+            <div style={{ background: "#0F0F10", border: "1px solid rgba(234,217,222,0.1)", borderRadius: 14, padding: 20 }}>
+              <h2 style={{ fontFamily: "Georgia, serif", fontSize: 15, marginBottom: 8 }}>Export Record</h2>
+              <p className="mono" style={{ fontSize: 10, color: "rgba(234,217,222,.45)", lineHeight: 1.5, marginBottom: 12 }}>Download the current live scores, notes and awards for records or offline sharing.</p>
+              <ExportMarksheet fileName={`${committee.code || committee.name}-marksheet`} headers={exportHeaders} rows={exportRows} />
             </div>
 
             <div style={{ background: "#0F0F10", border: "1px solid rgba(234,217,222,0.1)", borderRadius: 14, padding: 20 }}>
