@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import SpotlightCard from "@/components/SpotlightCard";
 import { rateEb } from "./actions";
 
-export default async function HireEbPage() {
+export default async function HireEbPage({ searchParams }: { searchParams: Promise<{ q?: string; area?: string }> }) {
+  const params = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -15,8 +16,18 @@ export default async function HireEbPage() {
     .eq("status", "approved")
     .order("created_at", { ascending: false });
 
+  const search = params.q?.trim().toLowerCase() ?? "";
+  const matchingEbs = (ebs ?? []).filter((eb) => {
+    const matchesSearch = !search || [eb.display_name, eb.bio, eb.experience, ...(eb.areas_of_expertise ?? [])]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(search));
+    const matchesArea = !params.area || eb.areas_of_expertise?.includes(params.area);
+    return matchesSearch && matchesArea;
+  });
+  const expertise = [...new Set((ebs ?? []).flatMap((eb) => eb.areas_of_expertise ?? []))].sort();
+
   const profiles = await Promise.all(
-    (ebs ?? []).map(async (eb) => {
+    matchingEbs.map(async (eb) => {
       const [photo, cv] = await Promise.all([
         eb.photo_path ? supabase.storage.from("eb-profiles").createSignedUrl(eb.photo_path, 60 * 10) : Promise.resolve({ data: null }),
         eb.cv_path ? supabase.storage.from("eb-documents").createSignedUrl(eb.cv_path, 60 * 10) : Promise.resolve({ data: null }),
@@ -60,11 +71,18 @@ export default async function HireEbPage() {
           </Link>
         </div>
 
+        <form style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+          <input name="q" defaultValue={params.q} placeholder="Search name, committee, or experience…" style={{ flex: 1, minWidth: 230, background: "#0F0F10", border: "1px solid rgba(234,217,222,.16)", color: "var(--text)", padding: "12px 14px", borderRadius: 6, fontSize: 13 }} />
+          {params.area && <input type="hidden" name="area" value={params.area} />}
+          <button type="submit" className="mono" style={{ background: "var(--paper)", color: "var(--ink)", border: "none", padding: "0 18px", borderRadius: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", cursor: "pointer" }}>Search</button>
+        </form>
+        {expertise.length > 0 && <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 28 }}><Link href={params.q ? `/hire-eb?q=${encodeURIComponent(params.q)}` : "/hire-eb"} className="mono" style={{ fontSize: 10.5, textTransform: "uppercase", textDecoration: "none", padding: "6px 11px", borderRadius: 99, border: "1px solid rgba(234,217,222,.16)", background: !params.area ? "var(--paper)" : "transparent", color: !params.area ? "var(--ink)" : "rgba(234,217,222,.7)" }}>All expertise</Link>{expertise.map((area) => <Link key={area} href={`/hire-eb?${new URLSearchParams({ ...(params.q ? { q: params.q } : {}), area }).toString()}`} className="mono" style={{ fontSize: 10.5, textTransform: "uppercase", textDecoration: "none", padding: "6px 11px", borderRadius: 99, border: "1px solid rgba(234,217,222,.16)", background: params.area === area ? "var(--paper)" : "transparent", color: params.area === area ? "var(--ink)" : "rgba(234,217,222,.7)" }}>{area}</Link>)}</div>}
+
         {error && <p style={{ color: "#e59aa8" }}>Could not load EBs: {error.message}</p>}
 
         {profiles.length === 0 && (
           <div style={{ background: "#0F0F10", border: "1px dashed rgba(234,217,222,0.2)", borderRadius: 8, padding: 40, textAlign: "center", color: "rgba(234,217,222,0.55)" }}>
-            No approved EB profiles yet. Applications go into a pending queue for admin review.
+            {ebs?.length ? "No verified EBs match these filters. Try a different search or expertise." : "No approved EB profiles yet. Applications go into a pending queue for admin review."}
           </div>
         )}
 
