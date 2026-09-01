@@ -7,6 +7,7 @@ type ColorBendsProps = {
 };
 
 const fragmentShader = `
+  precision highp float;
   uniform vec2 uCanvas;
   uniform float uTime;
   uniform vec2 uPointer;
@@ -35,6 +36,7 @@ const fragmentShader = `
 `;
 
 const vertexShader = `
+  precision highp float;
   attribute vec2 position;
   varying vec2 vUv;
   void main() {

@@ -27,29 +27,28 @@ const item = {
 export default function AnimatedNavLinks({ isLoggedIn }: { isLoggedIn: boolean }) {
   return (
     <motion.div
-      className="mono"
       variants={container}
       initial="hidden"
       animate="show"
-      style={{ display: "flex", gap: 20, alignItems: "center", fontSize: 11.5, letterSpacing: 0.4, textTransform: "uppercase", flexWrap: "wrap" }}
+      className="site-nav-links mono"
     >
       {LINKS.map((l) => (
         <motion.div variants={item} key={l.href}>
-          <Link href={l.href} className="munlocked-nav-link" style={{ color: "var(--text)", textDecoration: "none", opacity: 0.7 }}>
+          <Link href={l.href} className="munlocked-nav-link">
             {l.label}
           </Link>
         </motion.div>
       ))}
       {isLoggedIn && (
         <motion.div variants={item}>
-          <Link href="/inbox" className="munlocked-nav-link" style={{ color: "var(--coral)", textDecoration: "none", fontWeight: 700 }}>
+          <Link href="/inbox" className="munlocked-nav-link nav-accent">
             Inbox
           </Link>
         </motion.div>
       )}
       {isLoggedIn && (
         <motion.form variants={item} action={signOutAction}>
-          <button type="submit" className="munlocked-nav-link mono" style={{ color: "var(--text)", opacity: 0.7, background: "none", border: "none", cursor: "pointer", padding: 0, font: "inherit" }}>
+          <button type="submit" className="munlocked-nav-link mono nav-button">
             Sign out
           </button>
         </motion.form>
@@ -57,7 +56,7 @@ export default function AnimatedNavLinks({ isLoggedIn }: { isLoggedIn: boolean }
       <motion.div variants={item}>
         <Link
           href={isLoggedIn ? "/conferences/submit" : "/login"}
-          style={{ background: "var(--paper)", color: "var(--ink)", padding: "8px 16px", borderRadius: 20, textDecoration: "none", fontWeight: 700, whiteSpace: "nowrap" }}
+          className="nav-primary"
         >
           {isLoggedIn ? "List your MUN" : "Sign In"}
         </Link>

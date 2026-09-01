@@ -1,5 +1,6 @@
 import "./globals.css";
 import ChatWidget from "@/components/ChatWidget";
+import AppChrome from "@/components/AppChrome";
 
 export const metadata = {
   title: "MUNlocked",
@@ -14,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
+        <AppChrome>{children}</AppChrome>
         <ChatWidget />
       </body>
     </html>
