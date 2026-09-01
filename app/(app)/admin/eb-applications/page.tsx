@@ -59,9 +59,29 @@ export default async function AdminEbApplicationsPage() {
 
   const { data: pending, error } = await supabase
     .from("eb_applications")
-    .select("id, applicant_email, bio, experience, areas_of_expertise, previous_conferences, created_at")
+    .select("id, applicant_email, bio, experience, areas_of_expertise, previous_conferences, photo_path, cv_path, created_at")
     .eq("status", "pending")
     .order("created_at", { ascending: true });
+
+  // Files remain private. These short-lived links are created only after the
+  // admin gate above has passed, so applicants' uploads never become public.
+  const applications = await Promise.all(
+    (pending ?? []).map(async (application) => {
+      const [photo, cv] = await Promise.all([
+        application.photo_path
+          ? supabase.storage.from("eb-profiles").createSignedUrl(application.photo_path, 60 * 10)
+          : Promise.resolve({ data: null }),
+        application.cv_path
+          ? supabase.storage.from("eb-documents").createSignedUrl(application.cv_path, 60 * 10)
+          : Promise.resolve({ data: null }),
+      ]);
+      return {
+        ...application,
+        photoUrl: photo.data?.signedUrl ?? null,
+        cvUrl: cv.data?.signedUrl ?? null,
+      };
+    })
+  );
 
   return (
     <div style={{ minHeight: "100vh", padding: "48px 24px 100px" }}>
@@ -71,19 +91,19 @@ export default async function AdminEbApplicationsPage() {
         </div>
         <h1 style={{ fontFamily: "Georgia, serif", fontSize: 30, marginBottom: 8 }}>Pending EB Applications</h1>
         <p style={{ color: "rgba(234,217,222,0.6)", fontSize: 14, marginBottom: 34 }}>
-          {pending?.length ?? 0} application{pending?.length === 1 ? "" : "s"} waiting for review.
+          {applications.length} application{applications.length === 1 ? "" : "s"} waiting for review.
         </p>
 
         {error && <p style={{ color: "#e59aa8" }}>Could not load queue: {error.message}</p>}
 
-        {pending?.length === 0 && (
+        {applications.length === 0 && (
           <div style={{ background: "#0F0F10", border: "1px dashed rgba(234,217,222,0.2)", borderRadius: 8, padding: 40, textAlign: "center", color: "rgba(234,217,222,0.55)" }}>
             Queue is empty.
           </div>
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {pending?.map((a) => (
+          {applications.map((a) => (
             <div key={a.id} style={{ background: "#0F0F10", border: "1px solid rgba(234,217,222,0.12)", borderRadius: 8, padding: 24 }}>
               <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
                 <h3 style={{ fontFamily: "Georgia, serif", fontSize: 18 }}>{a.applicant_email}</h3>
@@ -99,6 +119,12 @@ export default async function AdminEbApplicationsPage() {
                   <><b style={{ color: "var(--coral)" }}>Previous Conferences:</b> {a.previous_conferences}</>
                 )}
               </p>
+              {(a.photoUrl || a.cvUrl) && (
+                <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 16 }}>
+                  {a.photoUrl && <a href={a.photoUrl} target="_blank" rel="noreferrer" className="mono" style={{ color: "var(--coral)", fontSize: 11 }}>View profile photo ↗</a>}
+                  {a.cvUrl && <a href={a.cvUrl} target="_blank" rel="noreferrer" className="mono" style={{ color: "var(--coral)", fontSize: 11 }}>Review CV / portfolio ↗</a>}
+                </div>
+              )}
               <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
                 <form action={reviewApplication}>
                   <input type="hidden" name="id" value={a.id} />
