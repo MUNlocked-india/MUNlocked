@@ -33,15 +33,18 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const { data: conversations } = await supabase.from("conversations").select("id, subject, created_at, eb_application_id").order("created_at", { ascending: false });
   const conversationIds = (conversations ?? []).map((conversation) => conversation.id);
   const { data: messageRows } = conversationIds.length
-    ? await supabase.from("messages").select("id, conversation_id, sender_id").in("conversation_id", conversationIds)
-    : { data: [] as { id: string; conversation_id: string; sender_id: string }[] };
+    ? await supabase.from("messages").select("id, conversation_id, sender_id, body, created_at").in("conversation_id", conversationIds)
+    : { data: [] as { id: string; conversation_id: string; sender_id: string; body: string; created_at: string }[] };
   const messageIds = messageRows?.map((message) => message.id) ?? [];
   const { data: readRows } = messageIds.length
     ? await supabase.from("message_reads").select("message_id").eq("reader_id", user.id).in("message_id", messageIds)
     : { data: [] as { message_id: string }[] };
   const readMessageIds = new Set((readRows ?? []).map((read) => read.message_id));
   const unreadByConversation = new Map<string, number>();
+  const latestByConversation = new Map<string, { body: string; created_at: string; sender_id: string }>();
   messageRows?.forEach((message) => {
+    const latest = latestByConversation.get(message.conversation_id);
+    if (!latest || new Date(message.created_at) > new Date(latest.created_at)) latestByConversation.set(message.conversation_id, message);
     if (message.sender_id !== user.id && !readMessageIds.has(message.id)) {
       unreadByConversation.set(message.conversation_id, (unreadByConversation.get(message.conversation_id) ?? 0) + 1);
     }
@@ -53,6 +56,6 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     <p style={{ color: "rgba(234,217,222,0.62)", marginBottom: 28 }}>Keep conference hiring conversations inside MUNlocked. Both sides receive an email alert when a new message arrives.</p>
     {params.sent && <p className="success-text">Message sent — the EB has been notified by email.</p>}{params.error && <p className="error-text">{params.error}</p>}
     {selectedEb && <form action={sendMessage} className="auth-card" style={{ maxWidth: 620, marginBottom: 30 }}><input type="hidden" name="eb_id" value={selectedEb.id}/><h2 style={{ fontFamily: "Georgia, serif", fontSize: 21, marginBottom: 8 }}>Contact {selectedEb.applicant_email}</h2><p style={{ fontSize: 13, color: "rgba(7,7,7,.65)", marginBottom: 18 }}>{selectedEb.bio}</p><InquiryTemplates /><label htmlFor="subject">Conference / appointment subject</label><input id="subject" name="subject" required placeholder="e.g. Chair invitation for AcmeMUN 2026"/><label htmlFor="body">Your message</label><textarea id="body" name="body" required rows={7} style={{ width:"100%", padding:12, marginTop:6, marginBottom:16, resize:"vertical" }} placeholder="Introduce your conference, committee, dates, role, and next steps."/><button className="submit">Send via MUNlocked</button></form>}
-    <div style={{ display:"grid", gap:10 }}>{conversations?.length ? conversations.map(c => { const unread = unreadByConversation.get(c.id) ?? 0; return <Link href={`/inbox/${c.id}`} key={c.id} style={{ border:"1px solid rgba(234,217,222,.14)", padding:16, borderRadius:8, textDecoration:"none", display:"flex", justifyContent:"space-between", gap:14, alignItems:"center" }}><div><b>{c.subject}</b><div className="mono" style={{ fontSize:11, opacity:.55, marginTop:6 }}>Conversation active · {new Date(c.created_at).toLocaleDateString()}</div></div>{unread > 0 && <span className="mono" style={{ minWidth:22, height:22, display:"inline-flex", alignItems:"center", justifyContent:"center", borderRadius:99, background:"var(--coral)", color:"var(--ink)", fontSize:10, fontWeight:700 }}>{unread}</span>}</Link>}) : <p style={{ opacity:.65 }}>No conversations yet. <Link href="/hire-eb">Browse verified EBs →</Link></p>}</div>
+    <div style={{ display:"grid", gap:10 }}>{conversations?.length ? conversations.map(c => { const unread = unreadByConversation.get(c.id) ?? 0; const latest = latestByConversation.get(c.id); return <Link href={`/inbox/${c.id}`} key={c.id} style={{ border:"1px solid rgba(234,217,222,.14)", padding:16, borderRadius:10, textDecoration:"none", display:"flex", justifyContent:"space-between", gap:14, alignItems:"center", background: unread ? "rgba(201,138,148,.07)" : "transparent" }}><div style={{ minWidth:0 }}><b>{c.subject}</b><div style={{ fontSize:12, opacity:.62, marginTop:6, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{latest ? `${latest.sender_id === user.id ? "You: " : ""}${latest.body}` : "Start the conversation"}</div><div className="mono" style={{ fontSize:10, opacity:.45, marginTop:6 }}>{latest ? new Date(latest.created_at).toLocaleString("en-IN", { day:"numeric", month:"short", hour:"numeric", minute:"2-digit" }) : new Date(c.created_at).toLocaleDateString()}</div></div>{unread > 0 && <span className="mono" style={{ minWidth:22, height:22, display:"inline-flex", alignItems:"center", justifyContent:"center", borderRadius:99, background:"var(--coral)", color:"var(--ink)", fontSize:10, fontWeight:700 }}>{unread}</span>}</Link>}) : <p style={{ opacity:.65 }}>No conversations yet. <Link href="/hire-eb">Browse verified EBs →</Link></p>}</div>
   </div></div>;
 }
