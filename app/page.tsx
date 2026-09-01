@@ -7,6 +7,7 @@ import SiteHeader from "@/components/SiteHeader";
 import Reveal from "@/components/Reveal";
 import BlurText from "@/components/BlurText";
 import { createClient } from "@/lib/supabase/server";
+import EbDepthCarousel, { type EbShowcaseItem } from "@/components/EbDepthCarousel";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -24,11 +25,26 @@ export default async function Home() {
         .limit(3),
       supabase
         .from("eb_applications")
-        .select("id, applicant_email, experience, areas_of_expertise")
+        .select("id, display_name, experience, areas_of_expertise, photo_path")
         .eq("status", "approved")
         .order("created_at", { ascending: false })
         .limit(3),
     ]);
+
+  const featuredEbs: EbShowcaseItem[] = await Promise.all(
+    (latestEbs ?? []).map(async (eb) => {
+      const photo = eb.photo_path
+        ? await supabase.storage.from("eb-profiles").createSignedUrl(eb.photo_path, 60 * 10)
+        : { data: null };
+      return {
+        id: eb.id,
+        name: eb.display_name ?? "Verified Executive Board",
+        experience: eb.experience ?? "MUNlocked verified profile",
+        expertise: eb.areas_of_expertise ?? [],
+        photoUrl: photo.data?.signedUrl ?? null,
+      };
+    })
+  );
 
   return (
     <>
@@ -216,16 +232,9 @@ export default async function Home() {
           <Reveal delay={120}>
             <div>
               <div className="mono" style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "var(--coral)", marginBottom: 8 }}>Verified This Week</div>
-              <h3 style={{ fontFamily: "Georgia, serif", fontSize: 24, marginBottom: 20 }}>Newest EBs</h3>
-              {latestEbs && latestEbs.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {latestEbs.map((eb) => (
-                    <div key={eb.id} style={{ borderBottom: "1px solid rgba(234,217,222,0.1)", paddingBottom: 12 }}>
-                      <div style={{ fontFamily: "Georgia, serif", fontSize: 15.5, marginBottom: 4 }}>{eb.applicant_email}</div>
-                      <div className="mono" style={{ fontSize: 11, color: "rgba(234,217,222,0.5)" }}>{eb.experience?.slice(0, 60)}{eb.experience && eb.experience.length > 60 ? "…" : ""}</div>
-                    </div>
-                  ))}
-                </div>
+              <h3 style={{ fontFamily: "Georgia, serif", fontSize: 24, marginBottom: 8 }}>Verified EBs, On Record</h3>
+              {featuredEbs.length > 0 ? (
+                <EbDepthCarousel items={featuredEbs} />
               ) : (
                 <p style={{ fontSize: 13.5, color: "rgba(234,217,222,0.5)" }}>No verified EBs yet — applications are reviewed before listing.</p>
               )}
