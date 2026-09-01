@@ -59,6 +59,7 @@ export default async function HireEbPage() {
                   </span>
                 ))}
               </div>
+              <Link href={user ? `/inbox?eb=${eb.id}` : "/login"} className="mono" style={{ display:"inline-block", marginTop:16, background:"var(--ink)", color:"var(--paper)", padding:"9px 12px", borderRadius:4, textDecoration:"none", fontSize:11, textTransform:"uppercase" }}>Message through MUNlocked →</Link>
             </SpotlightCard>
           ))}
         </div>
