@@ -28,7 +28,12 @@ export async function resendConfirmationAction(formData: FormData) {
   const email = String(formData.get("email"));
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.resend({ type: "signup", email });
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: appUrl ? { emailRedirectTo: `${appUrl}/auth/confirm?next=/` } : undefined,
+  });
 
   if (error) {
     redirect(`/login?error=${encodeURIComponent(error.message)}`);

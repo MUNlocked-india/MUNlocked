@@ -33,7 +33,7 @@ export default function SignupPage() {
         // This payload is what the `handle_new_user` trigger reads to create
         // the profiles row — see supabase/schema.sql.
         data: { full_name: fullName, role },
-        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        emailRedirectTo: `${window.location.origin}/auth/confirm?next=/`,
       },
     });
 
