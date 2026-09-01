@@ -60,6 +60,11 @@ export default function NewCommitteeForm({
       <label htmlFor="conference_name">Conference (optional)</label>
       <input id="conference_name" name="conference_name" type="text" placeholder="e.g. Aethris MUN 2026" />
 
+      <label style={{ display: "flex", gap: 9, alignItems: "center", marginBottom: 18, textTransform: "none", letterSpacing: 0, fontSize: 13 }}>
+        <input type="checkbox" name="sis_marksheet" defaultChecked />
+        Use the SIS/HCC marksheet preset (GSL, MOD 1/2, POI, chits, documentation, decorum, awards)
+      </label>
+
       <button type="submit" className="submit">Create Committee</button>
     </form>
   );
