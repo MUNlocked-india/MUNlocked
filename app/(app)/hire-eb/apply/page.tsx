@@ -15,6 +15,28 @@ async function submitApplication(formData: FormData) {
     .map((a) => a.trim())
     .filter(Boolean);
 
+  const photo = formData.get("photo");
+  const cv = formData.get("cv");
+  let photoPath: string | null = null;
+  let cvPath: string | null = null;
+  if (photo instanceof File && photo.size > 0) {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(photo.type) || photo.size > 5 * 1024 * 1024) {
+      redirect(`/hire-eb/apply?error=${encodeURIComponent("Profile photo must be a JPG, PNG, or WebP under 5 MB.")}`);
+    }
+    const extension = photo.name.split(".").pop()?.toLowerCase() || "jpg";
+    photoPath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+    const { error } = await supabase.storage.from("eb-profiles").upload(photoPath, photo, { contentType: photo.type });
+    if (error) redirect(`/hire-eb/apply?error=${encodeURIComponent(error.message)}`);
+  }
+  if (cv instanceof File && cv.size > 0) {
+    if (cv.type !== 'application/pdf' || cv.size > 10 * 1024 * 1024) {
+      redirect(`/hire-eb/apply?error=${encodeURIComponent("CV must be a PDF under 10 MB.")}`);
+    }
+    cvPath = `${user.id}/${crypto.randomUUID()}.pdf`;
+    const { error } = await supabase.storage.from("eb-documents").upload(cvPath, cv, { contentType: cv.type });
+    if (error) redirect(`/hire-eb/apply?error=${encodeURIComponent(error.message)}`);
+  }
+
   const { error } = await supabase.from("eb_applications").insert({
     applicant_id: user!.id,
     applicant_email: user!.email,
@@ -22,6 +44,8 @@ async function submitApplication(formData: FormData) {
     experience: String(formData.get("experience")),
     areas_of_expertise: areas,
     previous_conferences: String(formData.get("previous_conferences") || "") || null,
+    photo_path: photoPath,
+    cv_path: cvPath,
     status: "pending",
   });
 
@@ -46,7 +70,7 @@ export default async function ApplyEbPage({
 
   return (
     <div className="auth-wrap" style={{ alignItems: "flex-start", paddingTop: 60 }}>
-      <form action={submitApplication} className="auth-card" style={{ maxWidth: 520 }}>
+      <form action={submitApplication} encType="multipart/form-data" className="auth-card" style={{ maxWidth: 520 }}>
         <div className="mono" style={{ fontSize: 11, letterSpacing: 2, color: "var(--coral)", marginBottom: 8, textTransform: "uppercase" }}>
           File No. IN/MUN/EB-APPLY
         </div>
@@ -60,6 +84,14 @@ export default async function ApplyEbPage({
 
         <label htmlFor="bio">Short Bio</label>
         <textarea id="bio" name="bio" required rows={3} style={textareaStyle} placeholder="A few sentences about you." />
+
+        <label htmlFor="photo">Profile Photo</label>
+        <input id="photo" name="photo" type="file" required accept="image/jpeg,image/png,image/webp" />
+        <p style={{ marginTop: -10, marginBottom: 16, fontSize: 12, color: "rgba(7,7,7,0.58)" }}>JPG, PNG, or WebP · maximum 5 MB</p>
+
+        <label htmlFor="cv">CV / MUN Portfolio (PDF)</label>
+        <input id="cv" name="cv" type="file" required accept="application/pdf" />
+        <p style={{ marginTop: -10, marginBottom: 16, fontSize: 12, color: "rgba(7,7,7,0.58)" }}>PDF · maximum 10 MB · private to MUNlocked review</p>
 
         <label htmlFor="experience">MUN Experience</label>
         <textarea id="experience" name="experience" required rows={3} style={textareaStyle} placeholder="Committees chaired, conferences attended, notable achievements." />
