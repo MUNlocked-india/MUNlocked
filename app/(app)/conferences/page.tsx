@@ -31,9 +31,9 @@ export default async function ConferencesPage() {
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 16, marginBottom: 34 }}>
           <div>
-            <h1 style={{ fontFamily: "Georgia, serif", fontSize: 34, marginBottom: 8 }}>Conference Directory</h1>
+            <h1 style={{ fontFamily: "var(--font-display)", fontSize: 38, marginBottom: 8 }}>Conference Directory</h1>
             <p style={{ color: "rgba(234,217,222,0.6)", fontSize: 14, maxWidth: 560 }}>
-              Every listing here has been reviewed and approved by an admin — nothing goes live automatically.
+              Compare the rooms worth entering—dates, committees, fees and registration details presented clearly, with every listing reviewed before it goes live.
             </p>
           </div>
           <Link

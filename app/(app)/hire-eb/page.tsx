@@ -57,9 +57,9 @@ export default async function HireEbPage({ searchParams }: { searchParams: Promi
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 16, marginBottom: 34 }}>
           <div>
-            <h1 style={{ fontFamily: "Georgia, serif", fontSize: 32, marginBottom: 8 }}>Hire an EB</h1>
+            <h1 style={{ fontFamily: "var(--font-display)", fontSize: 38, marginBottom: 8 }}>Executive Board Directory</h1>
             <p style={{ color: "rgba(234,217,222,0.6)", fontSize: 14, maxWidth: 540 }}>
-              EBs publish their professional profile, experience, formal photo and CV directly. Admins can remove marketplace listings that breach community rules.
+              Choose chairs from evidence, not familiarity. Every profile places a formal photograph, conference record, public CV and community rating in one honest view.
             </p>
           </div>
           <Link

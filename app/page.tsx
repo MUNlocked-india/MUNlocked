@@ -7,12 +7,13 @@ import Reveal from "@/components/Reveal";
 import BlurText from "@/components/BlurText";
 import { createClient } from "@/lib/supabase/server";
 import EbDepthCarousel, { type EbShowcaseItem } from "@/components/EbDepthCarousel";
+import FeatureVisual from "@/components/FeatureVisual";
 
 const FEATURES = [
-  { number: "01", title: "Find the right room", label: "Conference Directory", copy: "Dates, committees, fees and registration details in one clean record. Spend less time searching and more time preparing.", href: "/conferences", className: "feature-conference" },
-  { number: "02", title: "Earn trust in public", label: "EB Marketplace", copy: "Real photos, real CVs, reviews and direct enquiries. Executive Boards get discovered through their work, not their circles.", href: "/hire-eb", className: "feature-eb" },
-  { number: "03", title: "Walk in prepared", label: "Open Research", copy: "Background guides and articles stay free, credited and searchable so every delegate gets a serious first step.", href: "/research", className: "feature-research" },
-  { number: "04", title: "Run the room live", label: "Digital Dais", copy: "A shared marksheet, award tracking and dual speech timers keep the whole dais on the same page.", href: "/committees", className: "feature-dais" },
+  { number: "01", title: "Find the right room", label: "Conference Directory", copy: "Compare verified dates, committees, fees and registration details without chasing scattered posts or private group chats.", href: "/conferences", className: "feature-conference", visual: "conference" as const },
+  { number: "02", title: "Let your record speak", label: "EB Marketplace", copy: "Discover chairs through real photographs, public CVs, experience and reviews—so opportunity follows capability, not proximity.", href: "/hire-eb", className: "feature-eb", visual: "eb" as const },
+  { number: "03", title: "Walk in prepared", label: "Open Research", copy: "Use free, credited background guides and articles that turn an unfamiliar agenda into a confident first intervention.", href: "/research", className: "feature-research", visual: "research" as const },
+  { number: "04", title: "Run the room, not a sheet", label: "Digital Dais", copy: "Score delegates, track awards and time speeches together, while the Executive Board stays focused on the debate in front of them.", href: "/committees", className: "feature-dais", visual: "dais" as const },
 ];
 
 export default async function Home() {
@@ -63,7 +64,7 @@ export default async function Home() {
 
       <section id="platform" className="platform-section">
         <Reveal><div className="section-intro"><span className="section-index">01 / THE PLATFORM</span><BlurText as="h2" text="Everything the circuit was missing." /><p>Four connected tools. One public record. Less chaos between discovery, preparation and committee.</p></div></Reveal>
-        <div className="feature-bento">{FEATURES.map((feature, index) => <Reveal key={feature.number} delay={index * 80}><Link href={feature.href} className={`feature-card ${feature.className}`}><div className="feature-top"><span>{feature.number}</span><span>{feature.label}</span><span>↗</span></div><div className="feature-visual" aria-hidden><span /><span /><span /></div><div><h3>{feature.title}</h3><p>{feature.copy}</p></div></Link></Reveal>)}</div>
+        <div className="feature-bento">{FEATURES.map((feature, index) => <Reveal key={feature.number} delay={index * 80}><Link href={feature.href} className={`feature-card ${feature.className}`}><div className="feature-top"><span>{feature.number}</span><span>{feature.label}</span><span>↗</span></div><FeatureVisual type={feature.visual} /><div><h3>{feature.title}</h3><p>{feature.copy}</p></div></Link></Reveal>)}</div>
       </section>
 
       <section className="story-section">

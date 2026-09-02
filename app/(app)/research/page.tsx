@@ -47,9 +47,9 @@ export default async function ResearchPage({
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 16, marginBottom: 28 }}>
           <div>
-            <h1 style={{ fontFamily: "Georgia, serif", fontSize: 32, marginBottom: 8 }}>Free Research Library</h1>
+            <h1 style={{ fontFamily: "var(--font-display)", fontSize: 38, marginBottom: 8 }}>Free Research Library</h1>
             <p style={{ color: "rgba(234,217,222,0.6)", fontSize: 14, maxWidth: 560 }}>
-              Every guide is screened before it&apos;s published. Search by agenda, upvote what actually helped you.
+              Begin with substance, not a paywall. Search practical guides by committee or agenda, then credit the work that genuinely strengthens your preparation.
             </p>
           </div>
           <Link href={user ? "/research/submit" : "/login"} className="mono" style={{ background: "var(--paper)", color: "var(--ink)", padding: "12px 20px", borderRadius: 3, textDecoration: "none", fontSize: 12, fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}>

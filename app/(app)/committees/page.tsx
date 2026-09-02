@@ -22,9 +22,9 @@ export default async function CommitteesPage() {
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 16, marginBottom: 34 }}>
           <div>
-            <h1 style={{ fontFamily: "Georgia, serif", fontSize: 30, marginBottom: 8 }}>Your Committees</h1>
+            <h1 style={{ fontFamily: "var(--font-display)", fontSize: 38, marginBottom: 8 }}>Your Digital Dais</h1>
             <p style={{ color: "rgba(234,217,222,0.6)", fontSize: 14, maxWidth: 520 }}>
-              One shared marksheet per committee — chairs, co-chairs, and Secretariat all see the same live record.
+              One live record for the entire dais—shared scoring, speaker timing and awards that keep every chair aligned without spreadsheet chaos.
             </p>
           </div>
           <Link href="/committees/new" className="mono" style={{ background: "var(--paper)", color: "var(--ink)", padding: "12px 20px", borderRadius: 3, textDecoration: "none", fontSize: 12, fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}>
