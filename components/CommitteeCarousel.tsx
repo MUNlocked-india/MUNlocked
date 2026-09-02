@@ -6,6 +6,13 @@ import type { CommitteeProfile } from "@/lib/committee-data";
 import type { CommitteeUpdate } from "@/lib/committee-updates";
 import styles from "./CommitteeCarousel.module.css";
 
+const dateFormatter = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+function formatPublishedAt(value: string) {
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? dateFormatter.format(timestamp) : "Live source";
+}
+
 function CommitteeSeal({ committee }: { committee: CommitteeProfile }) {
   return <div className={styles.seal} style={{ "--committee-accent": committee.accent } as CSSProperties}><span className={styles.sealOrbit}>MUNLOCKED · COMMITTEE DESK · </span><div className={styles.laurel}>‹ <b>{committee.code}</b> ›</div><small>{committee.simulation ? "SIMULATION" : "UNITED NATIONS"}</small></div>;
 }
@@ -33,7 +40,7 @@ export default function CommitteeCarousel({ committees, updates }: { committees:
       <div className={styles.briefHead}><div><span className={styles.eyebrow}>{committee.code} · DIGITAL BRIEFING</span><h2>{committee.name}</h2></div><a href={committee.officialUrl} target="_blank" rel="noreferrer">Open official source <span>↗</span></a></div>
       {committee.simulation && <p className={styles.simulationNote}><b>Simulation note:</b> this is not an official UN organ. Always follow the mandate and procedure issued by your conference.</p>}
       <div className={styles.briefGrid}><article><span>01 / THE MANDATE</span><h3>Why this body exists</h3><p>{committee.mandate}</p></article><article><span>02 / SCOPE OF POWER</span><h3>What it can—and cannot—do</h3><p>{committee.authority}</p></article><article><span>03 / PREPARATION LENS</span><h3>Know the working terrain</h3><div className={styles.focus}>{committee.focus.map((focus) => <i key={focus}>{focus}</i>)}</div></article></div>
-      <div className={styles.newsDesk}><div className={styles.newsHead}><div><span className={styles.liveDot} /> OFFICIAL SIGNAL DESK</div><p>{committee.simulation ? "Reference links for this simulation" : "UN Geneva feed · refreshed hourly"}</p></div><div className={styles.newsGrid}>{(updates[committee.code] ?? []).length ? updates[committee.code].map((item, index) => <a href={item.url} target="_blank" rel="noreferrer" key={`${item.url}-${index}`}><span>{item.direct ? `${committee.code} MATCH` : "LATEST UN UPDATE"}</span><h3>{item.title}</h3><p>{item.source} · {item.publishedAt ? new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" }).format(new Date(item.publishedAt)) : "Live source"}</p><b>Read official update ↗</b></a>) : <div className={styles.newsEmpty}><p>The official feed is between updates. The committee source remains available live.</p><a href={committee.updatesUrl} target="_blank" rel="noreferrer">Open the official news desk ↗</a></div>}</div><a className={styles.allNews} href={committee.updatesUrl} target="_blank" rel="noreferrer">Visit {committee.code}&apos;s official updates page ↗</a></div>
+      <div className={styles.newsDesk}><div className={styles.newsHead}><div><span className={styles.liveDot} /> OFFICIAL SIGNAL DESK</div><p>{committee.simulation ? "Reference links for this simulation" : "UN Geneva feed · refreshed hourly"}</p></div><div className={styles.newsGrid}>{(updates[committee.code] ?? []).length ? updates[committee.code].map((item, index) => <a href={item.url} target="_blank" rel="noreferrer" key={`${item.url}-${index}`}><span>{item.direct ? `${committee.code} MATCH` : "LATEST UN UPDATE"}</span><h3>{item.title}</h3><p>{item.source} · {formatPublishedAt(item.publishedAt)}</p><b>Read official update ↗</b></a>) : <div className={styles.newsEmpty}><p>The official feed is between updates. The committee source remains available live.</p><a href={committee.updatesUrl} target="_blank" rel="noreferrer">Open the official news desk ↗</a></div>}</div><a className={styles.allNews} href={committee.updatesUrl} target="_blank" rel="noreferrer">Visit {committee.code}&apos;s official updates page ↗</a></div>
     </motion.section></AnimatePresence>
   </div>;
 }

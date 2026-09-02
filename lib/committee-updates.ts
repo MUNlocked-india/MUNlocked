@@ -29,10 +29,10 @@ async function readFeed(url: string) {
 
 export async function getCommitteeUpdates(committees: CommitteeProfile[]) {
   const settled = await Promise.allSettled(FEEDS.map(readFeed));
-  const latest = settled.flatMap((result) => result.status === "fulfilled" ? result.value : []).sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt)).slice(0, 20);
+  const latest = settled.flatMap((result) => result.status === "fulfilled" ? result.value : []).sort((a, b) => (Date.parse(b.publishedAt) || 0) - (Date.parse(a.publishedAt) || 0)).slice(0, 20);
   return Object.fromEntries(committees.map((committee) => {
     const matched = latest.filter((item) => committee.keywords.some((keyword) => `${item.title} ${item.description}`.toLowerCase().includes(keyword))).slice(0, 3);
     const selected = matched.length ? matched : latest.slice(0, 3);
-    return [committee.code, selected.map((item) => ({ title: item.title, url: item.url, publishedAt: item.publishedAt, source: "UN Geneva", direct: matched.length > 0 })) satisfies CommitteeUpdate[]];
+    return [committee.code, selected.map((item) => ({ title: item.title, url: item.url, publishedAt: Number.isFinite(Date.parse(item.publishedAt)) ? item.publishedAt : "", source: "UN Geneva", direct: matched.length > 0 })) satisfies CommitteeUpdate[]];
   })) as Record<string, CommitteeUpdate[]>;
 }
