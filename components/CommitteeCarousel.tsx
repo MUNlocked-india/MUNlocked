@@ -1,8 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import Image from "next/image";
 import { useState, type CSSProperties } from "react";
+import CommitteeGraphic from "@/components/CommitteeGraphic";
 import type { CommitteeProfile } from "@/lib/committee-data";
 import type { CommitteeUpdate } from "@/lib/committee-updates";
 import styles from "./CommitteeCarousel.module.css";
@@ -12,10 +12,6 @@ const dateFormatter = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: 
 function formatPublishedAt(value: string) {
   const timestamp = Date.parse(value);
   return Number.isFinite(timestamp) ? dateFormatter.format(timestamp) : "Live source";
-}
-
-function CommitteeSeal({ committee }: { committee: CommitteeProfile }) {
-  return <div className={styles.seal} style={{ "--committee-accent": committee.accent } as CSSProperties}><span className={styles.sealOrbit}>MUNLOCKED · COMMITTEE DESK · </span><div className={styles.logoPlate}><Image src={committee.logo} alt={committee.logoAlt} width={132} height={92} /></div><b className={styles.sealCode}>{committee.code}</b><small>{committee.simulation ? "SIMULATION" : "OFFICIAL BODY"}</small></div>;
 }
 
 function feedLabel(committee: CommitteeProfile) {
@@ -37,7 +33,7 @@ export default function CommitteeCarousel({ committees, updates }: { committees:
         if (distance < -committees.length / 2) distance += committees.length;
         const visible = Math.abs(distance) <= 2;
         return <motion.button key={item.code} className={styles.cover} aria-label={`Open ${item.name}`} aria-current={index === active} onClick={() => setActive(index)} animate={{ x: `${distance * 59}%`, scale: distance === 0 ? 1 : Math.abs(distance) === 1 ? .82 : .67, rotateY: distance * -14, zIndex: 10 - Math.abs(distance), opacity: visible ? distance === 0 ? 1 : .45 : 0, filter: distance === 0 ? "blur(0px)" : "blur(2px)" }} transition={{ type: "spring", stiffness: 220, damping: 26 }} style={{ pointerEvents: visible ? "auto" : "none", "--committee-accent": item.accent } as CSSProperties}>
-          <div className={styles.coverGrain} /><span className={styles.coverEdition}>MUNLOCKED · COMMITTEE FILE</span><CommitteeSeal committee={item} /><div className={styles.coverText}><span>{item.family}</span><strong data-long-code={item.code.length > 7 || undefined}>{item.code}</strong><p>{item.name}</p></div><small className={styles.coverNumber}>{String(index + 1).padStart(2, "0")} / {String(committees.length).padStart(2, "0")}</small>
+          <div className={styles.coverGrain} /><CommitteeGraphic committee={item} /><small className={styles.coverNumber}>{String(index + 1).padStart(2, "0")} / {String(committees.length).padStart(2, "0")}</small>
         </motion.button>;
       })}</div>
       <button className={`${styles.arrow} ${styles.arrowRight}`} onClick={() => move(1)} aria-label="Next committee">→</button>

@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
-import { useRef } from "react";
+import { AnimatePresence, motion, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./FounderStory.module.css";
 
 const PRINCIPLES = [
@@ -17,6 +17,39 @@ const REASONS = [
   ["For the chair", "Better tools to observe, score and lead with consistency."],
   ["For the organiser", "A credible place to be discovered and build the right team."],
 ] as const;
+
+const GALLERY = [
+  { src: "/founder-gallery/01-munlocked-sky.png", alt: "Rishi Sahni beneath the MUNlocked emblem against a clear sky", caption: "THE IDEA / MUNLOCKED" },
+  { src: "/founder-gallery/04-speaking.jpg", alt: "Rishi Sahni speaking during a committee session", caption: "FINDING A VOICE IN THE ROOM" },
+  { src: "/founder-gallery/05-flags.jpg", alt: "Rishi Sahni standing before international flags", caption: "BUILT FOR GLOBAL ROOMS" },
+  { src: "/founder-gallery/06-dais.jpg", alt: "Rishi Sahni seated at the committee dais", caption: "THE VIEW FROM THE DAIS" },
+  { src: "/founder-gallery/07-recognition.jpg", alt: "Rishi Sahni receiving recognition at a Model United Nations conference", caption: "THE WORK, RECOGNISED" },
+  { src: "/founder-gallery/03-community.jpg", alt: "Rishi Sahni with a member of his community", caption: "PEOPLE BEHIND THE PROGRESS" },
+  { src: "/founder-gallery/02-portrait-art.jpg", alt: "A hand-drawn portrait of Rishi Sahni with a gavel", caption: "SEEN BY THE COMMUNITY" },
+] as const;
+
+function FounderCarousel({ reduceMotion }: { reduceMotion: boolean | null }) {
+  const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (reduceMotion || paused) return;
+    const timer = window.setInterval(() => setActive((current) => (current + 1) % GALLERY.length), 4200);
+    return () => window.clearInterval(timer);
+  }, [paused, reduceMotion]);
+
+  return (
+    <div className={styles.gallery} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.figure key={GALLERY[active].src} initial={reduceMotion ? false : { opacity: 0, scale: 1.05 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}>
+          <Image src={GALLERY[active].src} alt={GALLERY[active].alt} fill sizes="(max-width: 800px) 94vw, 42vw" />
+          <div className={styles.portraitWash} /><figcaption>{GALLERY[active].caption}</figcaption>
+        </motion.figure>
+      </AnimatePresence>
+      <div className={styles.galleryMeta}><span>{String(active + 1).padStart(2, "0")} / {String(GALLERY.length).padStart(2, "0")}</span><div>{GALLERY.map((image, index) => <button key={image.src} onClick={() => setActive(index)} className={index === active ? styles.galleryActive : ""} aria-label={`Show founder photograph ${index + 1}`} />)}</div></div>
+    </div>
+  );
+}
 
 export default function FounderStory() {
   const pageRef = useRef<HTMLElement>(null);
@@ -80,9 +113,7 @@ export default function FounderStory() {
       </section>
 
       <section className={styles.perspective}>
-        <motion.figure initial={reduceMotion ? false : { opacity: 0, clipPath: "inset(0 0 30% 0 round 26px)" }} whileInView={{ opacity: 1, clipPath: "inset(0 0 0% 0 round 26px)" }} viewport={{ once: true, amount: 0.25 }} transition={{ duration: 0.8 }}>
-          <Image src="/founder.jpg" alt="Rishi Sahni in formal attire" fill sizes="(max-width: 800px) 94vw, 42vw" /><div className={styles.portraitWash} /><figcaption>THE VIEW FROM BOTH SIDES OF THE DAIS</figcaption>
-        </motion.figure>
+        <FounderCarousel reduceMotion={reduceMotion} />
         <div className={styles.perspectiveCopy}>
           <span>03 / WHO THIS IS FOR</span><h2>Built around people,<br /><em>not page views.</em></h2>
           <p className={styles.perspectiveLead}>Every product decision returns to one question: does this help someone walk into their next room more prepared, more visible or more confident?</p>

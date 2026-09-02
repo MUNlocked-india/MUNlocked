@@ -10,3 +10,16 @@
 .identityNote{max-width:760px;margin:13px auto 0;color:rgba(244,237,240,.37);font:8px/1.6 monospace;letter-spacing:.06em;text-align:center;text-transform:uppercase}
 @media(max-width:850px){.logoPlate{width:88px;height:80px;padding:9px}.sealCode{bottom:26px;font-size:10px}.seal small{bottom:13px}.coverText strong[data-long-code="true"]{font-size:29px}}
 @media(max-width:540px){.logoPlate{width:76px;height:68px;padding:8px}.sealCode{bottom:23px;font-size:9px}.seal small{bottom:11px}.coverText strong[data-long-code="true"]{font-size:24px}}
+
+/* Distinct, full-card committee identities */
+.cover{background:radial-gradient(circle at 50% 42%,color-mix(in srgb,var(--committee-accent),transparent 72%),transparent 58%),linear-gradient(145deg,#18151a,#09090b 74%)}
+.cover::before,.cover::after{display:none}
+.committeeGraphic{position:absolute;inset:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--committee-accent);isolation:isolate}
+.committeeGraphic svg{position:relative;z-index:2;width:92%;height:auto;max-height:250px;filter:drop-shadow(0 18px 28px rgba(0,0,0,.35)) drop-shadow(0 0 24px color-mix(in srgb,var(--committee-accent),transparent 70%))}
+.officialGraphic{position:relative;z-index:2;width:84%;height:240px;object-fit:contain;filter:drop-shadow(0 18px 30px rgba(0,0,0,.36)) saturate(.88) brightness(1.22)}
+.committeeGraphic strong{position:relative;z-index:3;margin-top:18px;color:var(--text);font:800 47px/.86 var(--font-display);letter-spacing:-.065em;text-align:center;text-transform:uppercase;text-shadow:0 6px 22px rgba(0,0,0,.7)}
+.committeeGraphic strong[data-long-code="true"]{font-size:32px;letter-spacing:-.035em}
+.graphicGlow{position:absolute;z-index:0;width:83%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--committee-accent),transparent 72%),transparent 70%);filter:blur(15px)}
+.coverNumber{bottom:18px;color:rgba(244,237,240,.24)}
+@media(max-width:850px){.committeeGraphic svg{max-height:205px}.officialGraphic{height:195px}.committeeGraphic strong{font-size:39px}.committeeGraphic strong[data-long-code="true"]{font-size:28px}}
+@media(max-width:540px){.committeeGraphic{inset:16px}.committeeGraphic svg{max-height:170px}.officialGraphic{height:165px}.committeeGraphic strong{font-size:34px}.committeeGraphic strong[data-long-code="true"]{font-size:24px}}
