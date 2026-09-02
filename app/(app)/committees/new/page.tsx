@@ -10,48 +10,17 @@ async function createCommittee(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data, error } = await supabase
-    .from("committees")
-    .insert({
-      name: String(formData.get("name")),
-      code: String(formData.get("code")),
-      conference_name: String(formData.get("conference_name") || "") || null,
-      created_by: user!.id,
-    })
-    .select("id")
-    .single();
-
-  if (error || !data) {
-    redirect(`/committees/new?error=${encodeURIComponent(error?.message ?? "Could not create committee")}`);
-  }
-
-  // The creator is automatically the chair — insert their own membership row
-  // so committee_members reflects them too (used for the co-chair list UI).
-  await supabase.from("committee_members").insert({
-    committee_id: data!.id,
-    user_id: user!.id,
-    email: user!.email!,
-    role: "chair",
+  const { data: committeeId, error } = await supabase.rpc("create_committee_with_defaults", {
+    p_name: String(formData.get("name") || ""),
+    p_code: String(formData.get("code") || ""),
+    p_conference_name: String(formData.get("conference_name") || "") || null,
+    p_use_default: Boolean(formData.get("sis_marksheet")),
   });
 
-  // Seed the default grading columns so the sheet isn't empty on first load.
-  // The chair can rename, remove, or add more from here.
-  const DEFAULT_COLUMNS = formData.get("sis_marksheet") ? [
-    { key: "gsl", label: "GSL (10)" }, { key: "mod_1", label: "MOD 1 (10)" },
-    { key: "mod_2", label: "MOD 2 (10)" }, { key: "verbal_poi_reply", label: "Verbal POI + Reply (10)" },
-    { key: "poi_chit", label: "POI Chit (10)" }, { key: "reply_chit", label: "Reply Chit (5)" },
-    { key: "substantive_chit", label: "Substantive Chit (10)" }, { key: "documentation", label: "Documentation (10)" },
-    { key: "decorum", label: "Decorum (10)" },
-  ] : [
-    { key: "poi", label: "POI" }, { key: "chits", label: "Chits" }, { key: "verbal_reply", label: "Verbal Reply" },
-    { key: "gsl", label: "GSL" }, { key: "mod", label: "MOD" }, { key: "decorum", label: "Decorum" },
-    { key: "research", label: "Research" }, { key: "documentation", label: "Documentation" },
-  ];
-  await supabase.from("marksheet_columns").insert(
-    DEFAULT_COLUMNS.map((c, i) => ({ committee_id: data!.id, key: c.key, label: c.label, position: i }))
-  );
-
-  redirect(`/committees/${data!.id}`);
+  if (error || !committeeId) {
+    redirect(`/committees/new?error=${encodeURIComponent(error?.message ?? "Could not create committee")}`);
+  }
+  redirect(`/committees/${committeeId}`);
 }
 
 export default async function NewCommitteePage({

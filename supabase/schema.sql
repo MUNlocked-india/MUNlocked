@@ -406,3 +406,61 @@ create policy "Members can remove marksheet columns"
   using (public.can_access_committee(committee_id));
 
 alter table public.marks add column if not exists custom_scores jsonb not null default '{}'::jsonb;
+
+-- Creates a complete committee in one transaction. SECURITY INVOKER preserves
+-- every table's RLS policy while avoiding INSERT ... RETURNING visibility races.
+create or replace function public.create_committee_with_defaults(
+  p_name text,
+  p_code text,
+  p_conference_name text default null,
+  p_use_default boolean default true
+) returns uuid
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  requester_id uuid := (select auth.uid());
+  requester_email text := (select auth.jwt() ->> 'email');
+  new_committee_id uuid := gen_random_uuid();
+begin
+  if requester_id is null or requester_email is null then
+    raise exception 'Authentication required';
+  end if;
+  if nullif(btrim(p_name), '') is null or nullif(btrim(p_code), '') is null then
+    raise exception 'Committee name and code are required';
+  end if;
+
+  insert into public.committees (id, name, code, conference_name, created_by)
+  values (new_committee_id, btrim(p_name), upper(btrim(p_code)), nullif(btrim(p_conference_name), ''), requester_id);
+  insert into public.committee_members (committee_id, user_id, email, role)
+  values (new_committee_id, requester_id, requester_email, 'chair');
+
+  if p_use_default then
+    insert into public.marksheet_columns (committee_id, key, label, position) values
+      (new_committee_id, 'gsl', 'GSL (10)', 0),
+      (new_committee_id, 'mod_1', 'MOD 1 (10)', 1),
+      (new_committee_id, 'mod_2', 'MOD 2 (10)', 2),
+      (new_committee_id, 'verbal_poi_reply', 'Verbal POI + Reply (10)', 3),
+      (new_committee_id, 'poi_chit', 'POI Chit (10)', 4),
+      (new_committee_id, 'reply_chit', 'Reply Chit (5)', 5),
+      (new_committee_id, 'substantive_chit', 'Substantive Chit (10)', 6),
+      (new_committee_id, 'documentation', 'Documentation (10)', 7),
+      (new_committee_id, 'decorum', 'Decorum (10)', 8);
+  else
+    insert into public.marksheet_columns (committee_id, key, label, position) values
+      (new_committee_id, 'poi', 'POI', 0),
+      (new_committee_id, 'chits', 'Chits', 1),
+      (new_committee_id, 'verbal_reply', 'Verbal Reply', 2),
+      (new_committee_id, 'gsl', 'GSL', 3),
+      (new_committee_id, 'mod', 'MOD', 4),
+      (new_committee_id, 'decorum', 'Decorum', 5),
+      (new_committee_id, 'research', 'Research', 6),
+      (new_committee_id, 'documentation', 'Documentation', 7);
+  end if;
+  return new_committee_id;
+end;
+$$;
+
+revoke all on function public.create_committee_with_defaults(text,text,text,boolean) from public, anon;
+grant execute on function public.create_committee_with_defaults(text,text,text,boolean) to authenticated;
