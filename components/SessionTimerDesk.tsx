@@ -1,125 +1,224 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-type TimerKey = "speech" | "caucus";
-type TimerState = Record<TimerKey, { duration: number; remaining: number; running: boolean; finished: boolean }>;
+type Delegate = { id: string; country: string };
+type Attendance = "present" | "voting" | "absent";
+type DeskView = "roll-call" | "gsl" | "motions";
+type Clock = { duration: number; remaining: number; running: boolean; finished: boolean };
 
-const PRESETS: Record<TimerKey, number[]> = {
-  speech: [60, 75, 90, 120],
-  caucus: [300, 600, 900, 1200],
-};
+const SPEECH_PRESETS = [45, 60, 75, 90];
+const CAUCUS_PRESETS = [300, 600, 900, 1200];
 
 function display(seconds: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-export default function SessionTimerDesk() {
-  const [timers, setTimers] = useState<TimerState>({
-    speech: { duration: 90, remaining: 90, running: false, finished: false },
-    caucus: { duration: 600, remaining: 600, running: false, finished: false },
-  });
+function countryMark(country: string) {
+  return country.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function nextAttendance(current: Attendance): Attendance {
+  if (current === "present") return "voting";
+  if (current === "voting") return "absent";
+  return "present";
+}
+
+export default function SessionTimerDesk({ delegates, committeeName, committeeCode, conferenceName }: {
+  delegates: Delegate[];
+  committeeName: string;
+  committeeCode: string;
+  conferenceName?: string | null;
+}) {
+  const [view, setView] = useState<DeskView>("gsl");
+  const [query, setQuery] = useState("");
+  const [activeDelegateId, setActiveDelegateId] = useState(delegates[0]?.id ?? "");
+  const [queue, setQueue] = useState<string[]>([]);
+  const [attendance, setAttendance] = useState<Record<string, Attendance>>(() => Object.fromEntries(delegates.map((delegate) => [delegate.id, "present"])));
+  const [speech, setSpeech] = useState<Clock>({ duration: 60, remaining: 60, running: false, finished: false });
+  const [caucus, setCaucus] = useState<Clock>({ duration: 600, remaining: 600, running: false, finished: false });
+  const [motion, setMotion] = useState("");
   const audioContext = useRef<AudioContext | null>(null);
 
-  function chime() {
-    try {
-      audioContext.current ??= new AudioContext();
-      const context = audioContext.current;
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-      oscillator.frequency.setValueAtTime(784, context.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(1047, context.currentTime + 0.22);
-      gain.gain.setValueAtTime(0.001, context.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.5);
-      oscillator.connect(gain);
-      gain.connect(context.destination);
-      oscillator.start();
-      oscillator.stop(context.currentTime + 0.52);
-    } catch {
-      // The visual finish state remains useful if a browser blocks audio.
-    }
-  }
+  const activeDelegate = delegates.find((delegate) => delegate.id === activeDelegateId) ?? delegates[0];
+  const visibleDelegates = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return normalizedQuery ? delegates.filter((delegate) => delegate.country.toLowerCase().includes(normalizedQuery)) : delegates;
+  }, [delegates, query]);
+  const attendanceCounts = useMemo(() => delegates.reduce((counts, delegate) => {
+    counts[attendance[delegate.id] ?? "present"] += 1;
+    return counts;
+  }, { present: 0, voting: 0, absent: 0 } as Record<Attendance, number>), [attendance, delegates]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
       let shouldChime = false;
-      setTimers((current) => {
-        const next = { ...current };
-        (Object.keys(current) as TimerKey[]).forEach((key) => {
-          const timer = current[key];
-          if (!timer.running) return;
-          if (timer.remaining <= 1) {
-            next[key] = { ...timer, remaining: 0, running: false, finished: true };
-            shouldChime = true;
-          } else {
-            next[key] = { ...timer, remaining: timer.remaining - 1 };
-          }
-        });
-        return next;
-      });
-      if (shouldChime) chime();
+      const tick = (clock: Clock) => {
+        if (!clock.running) return clock;
+        if (clock.remaining <= 1) {
+          shouldChime = true;
+          return { ...clock, remaining: 0, running: false, finished: true };
+        }
+        return { ...clock, remaining: clock.remaining - 1 };
+      };
+      setSpeech(tick);
+      setCaucus(tick);
+      if (shouldChime) {
+        try {
+          audioContext.current ??= new AudioContext();
+          const context = audioContext.current;
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+          oscillator.frequency.setValueAtTime(740, context.currentTime);
+          oscillator.frequency.exponentialRampToValueAtTime(990, context.currentTime + 0.2);
+          gain.gain.setValueAtTime(0.001, context.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.1, context.currentTime + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.45);
+          oscillator.connect(gain);
+          gain.connect(context.destination);
+          oscillator.start();
+          oscillator.stop(context.currentTime + 0.46);
+        } catch {
+          // The visible finished state remains available when sound is blocked.
+        }
+      }
     }, 1000);
     return () => window.clearInterval(interval);
   }, []);
 
-  function toggle(key: TimerKey) {
-    setTimers((current) => {
-      const timer = current[key];
-      return { ...current, [key]: { ...timer, remaining: timer.remaining || timer.duration, running: !timer.running, finished: false } };
+  function setClockDuration(kind: "speech" | "caucus", duration: number) {
+    const update = { duration, remaining: duration, running: false, finished: false };
+    if (kind === "speech") setSpeech(update);
+    else setCaucus(update);
+  }
+
+  function toggleClock(kind: "speech" | "caucus") {
+    const update = (clock: Clock): Clock => ({ ...clock, remaining: clock.remaining || clock.duration, running: !clock.running, finished: false });
+    if (kind === "speech") setSpeech(update);
+    else setCaucus(update);
+  }
+
+  function resetClock(kind: "speech" | "caucus") {
+    const update = (clock: Clock): Clock => ({ ...clock, remaining: clock.duration, running: false, finished: false });
+    if (kind === "speech") setSpeech(update);
+    else setCaucus(update);
+  }
+
+  function addToQueue(delegateId: string) {
+    setQueue((current) => current.includes(delegateId) ? current : [...current, delegateId]);
+  }
+
+  function callNextSpeaker() {
+    setQueue((current) => {
+      const [next, ...rest] = current;
+      if (next) setActiveDelegateId(next);
+      return rest;
     });
+    setSpeech((clock) => ({ ...clock, remaining: clock.duration, running: false, finished: false }));
   }
 
-  function reset(key: TimerKey) {
-    setTimers((current) => ({ ...current, [key]: { ...current[key], remaining: current[key].duration, running: false, finished: false } }));
-  }
-
-  function setDuration(key: TimerKey, seconds: number) {
-    setTimers((current) => ({ ...current, [key]: { duration: seconds, remaining: seconds, running: false, finished: false } }));
-  }
-
-  const running = Object.values(timers).some((timer) => timer.running);
+  const queueDelegates = queue.map((delegateId) => delegates.find((delegate) => delegate.id === delegateId)).filter((delegate): delegate is Delegate => Boolean(delegate));
 
   return (
-    <section className="dais-timer-desk" aria-label="Dais timer controls">
-      <style>{`
-        @keyframes daisGlow { 0%, 100% { opacity: .42; transform: translateX(-2%); } 50% { opacity: .9; transform: translateX(3%); } }
-        @keyframes daisPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(228,83,75,.34); } 50% { box-shadow: 0 0 0 11px rgba(228,83,75,0); } }
-        .dais-timer-desk { position: relative; overflow: hidden; background: linear-gradient(125deg,#101114 0%,#17141a 58%,#101114 100%); border: 1px solid rgba(234,217,222,.17); border-radius: 18px; padding: 20px; margin: 0 0 24px; }
-        .dais-timer-desk:before { content:""; position:absolute; inset:-35% -10%; background:radial-gradient(circle,rgba(201,138,148,.2),transparent 36%); animation:daisGlow 7s ease-in-out infinite; pointer-events:none; }
-        .dais-timer-grid { position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
-        .dais-timer-panel { border:1px solid rgba(234,217,222,.13); background:rgba(4,4,5,.42); border-radius:14px; padding:15px; display:grid; grid-template-columns:84px 1fr; gap:14px; align-items:center; }
-        .dais-timer-panel.is-finished { border-color:#e4534b; animation:daisPulse .9s ease-in-out infinite; }
-        .dais-timer-ring { width:82px; aspect-ratio:1; border-radius:50%; display:grid; place-items:center; position:relative; }
-        .dais-timer-ring:after { content:""; position:absolute; inset:7px; border-radius:50%; background:#101114; }
-        .dais-timer-value { z-index:1; font-family:var(--font-geist-mono,monospace); font-size:15px; font-weight:800; letter-spacing:-1px; }
-        .dais-timer-presets button:hover { background:rgba(234,217,222,.12)!important; color:#fff!important; }
-        @media(max-width:700px){ .dais-timer-grid{grid-template-columns:1fr}.dais-timer-panel{grid-template-columns:76px 1fr}.dais-timer-ring{width:74px} }
-      `}</style>
-      <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
-        <div>
-          <div className="mono" style={{ color: "var(--coral)", fontSize: 10, letterSpacing: 1.8, textTransform: "uppercase", marginBottom: 5 }}>Live dais controls</div>
-          <h2 style={{ fontFamily: "Georgia, serif", fontSize: 20 }}>Keep the room moving.</h2>
-        </div>
-        <button onClick={() => setTimers((current) => Object.fromEntries(Object.entries(current).map(([key, timer]) => [key, { ...timer, running: !running, finished: false }])) as TimerState)} className="mono" style={{ background: running ? "transparent" : "var(--paper)", color: running ? "var(--text)" : "var(--ink)", border: running ? "1px solid rgba(234,217,222,.28)" : "none", borderRadius: 7, padding: "9px 12px", cursor: "pointer", fontSize: 10, fontWeight: 800, textTransform: "uppercase" }}>{running ? "Pause all" : "Start both"}</button>
-      </div>
-      <div className="dais-timer-grid">
-        {(Object.keys(timers) as TimerKey[]).map((key) => {
-          const timer = timers[key];
-          const ratio = Math.max(0, timer.remaining / timer.duration);
-          const color = timer.finished ? "#e4534b" : ratio > .35 ? "#7FA96B" : "#D6A24C";
-          const label = key === "speech" ? "Speaker clock" : "Caucus clock";
-          const description = key === "speech" ? "GSL, POI reply, or moderated speech" : "Moderated or unmoderated caucus";
-          return <div key={key} className={`dais-timer-panel${timer.finished ? " is-finished" : ""}`}>
-            <div className="dais-timer-ring" style={{ background: `conic-gradient(${color} ${ratio * 360}deg, rgba(234,217,222,.12) 0deg)` }}><span className="dais-timer-value" style={{ color }}>{display(timer.remaining)}</span></div>
-            <div>
-              <div className="mono" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, color: "var(--text)", marginBottom: 3 }}>{label}</div>
-              <p style={{ fontSize: 11, color: "rgba(234,217,222,.5)", marginBottom: 10 }}>{timer.finished ? "Time. Bring the room back." : description}</p>
-              <div style={{ display: "flex", gap: 7, marginBottom: 9 }}><button onClick={() => toggle(key)} className="mono" style={{ background: color, color: "#080809", border: "none", borderRadius: 5, padding: "7px 10px", cursor: "pointer", fontWeight: 800, fontSize: 10 }}>{timer.running ? "Pause" : "Start"}</button><button onClick={() => reset(key)} className="mono" style={{ background: "transparent", color: "rgba(234,217,222,.75)", border: "1px solid rgba(234,217,222,.2)", borderRadius: 5, padding: "7px 10px", cursor: "pointer", fontSize: 10 }}>Reset</button></div>
-              <div className="dais-timer-presets" style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>{PRESETS[key].map((seconds) => <button key={seconds} onClick={() => setDuration(key, seconds)} className="mono" style={{ background: timer.duration === seconds ? "rgba(234,217,222,.13)" : "transparent", color: "rgba(234,217,222,.58)", border: "1px solid rgba(234,217,222,.14)", borderRadius: 99, padding: "4px 7px", cursor: "pointer", fontSize: 9 }}>{display(seconds)}</button>)}</div>
+    <section className="session-cockpit" aria-label="Live committee session desk">
+      <header className="session-cockpit-tabs">
+        <div className="session-cockpit-wordmark"><span className="session-cockpit-gavel" aria-hidden="true">◆</span><span>MUNlocked <small>DAIS</small></span></div>
+        <nav aria-label="Session views">
+          {([["roll-call", "Roll Call"], ["gsl", "GSL & Timer"], ["motions", "Motions"]] as const).map(([key, label]) => (
+            <button key={key} type="button" className={view === key ? "is-active" : ""} onClick={() => setView(key)}>{label}</button>
+          ))}
+          <button type="button" onClick={() => document.getElementById("marksheet")?.scrollIntoView({ behavior: "smooth" })}>Marksheet</button>
+          <button type="button" onClick={() => document.getElementById("dais-sharing")?.scrollIntoView({ behavior: "smooth" })}>Dais</button>
+        </nav>
+        <span className="session-live-pill"><i /> Live room</span>
+      </header>
+
+      <div className="session-cockpit-body">
+        <aside className="session-roster">
+          <div className="session-roster-head">
+            <span className="session-code">{committeeCode}</span>
+            <h2>{committeeName}</h2>
+            {conferenceName ? <p>{conferenceName}</p> : null}
+            <div className="attendance-summary" aria-label="Attendance totals">
+              <span><i className="present" />{attendanceCounts.present} present</span>
+              <span><i className="voting" />{attendanceCounts.voting} P+V</span>
+              <span><i className="absent" />{attendanceCounts.absent} absent</span>
             </div>
-          </div>;
-        })}
+          </div>
+
+          <div className="session-roster-list">
+            {visibleDelegates.map((delegate) => {
+              const status = attendance[delegate.id] ?? "present";
+              const selected = delegate.id === activeDelegate?.id;
+              return (
+                <div key={delegate.id} className={`session-country${selected ? " is-selected" : ""}${status === "absent" ? " is-absent" : ""}`}>
+                  <button type="button" className="session-country-main" onClick={() => setActiveDelegateId(delegate.id)}><span className="country-mark" aria-hidden="true">{countryMark(delegate.country)}</span><span>{delegate.country}</span></button>
+                  <button type="button" className={`attendance-toggle ${status}`} aria-label={`Set ${delegate.country} attendance; currently ${status}`} title="Cycle present, present and voting, absent" onClick={() => setAttendance((current) => ({ ...current, [delegate.id]: nextAttendance(status) }))}>{status === "voting" ? "P+V" : status === "present" ? "P" : "A"}</button>
+                  <button type="button" className="queue-add" aria-label={`Add ${delegate.country} to speaker queue`} onClick={() => addToQueue(delegate.id)}>+</button>
+                </div>
+              );
+            })}
+            {visibleDelegates.length === 0 ? <p className="session-empty-list">No matching portfolio.</p> : null}
+          </div>
+          <label className="session-roster-search"><span className="sr-only">Search portfolios</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter portfolios…" /></label>
+        </aside>
+
+        <main className="session-stage">
+          {view === "roll-call" ? (
+            <div className="roll-call-panel">
+              <div className="stage-eyebrow">Room check · {delegates.length} portfolios</div>
+              <h2>Roll call, without the paperwork.</h2>
+              <p>Tap a status to move between present, present and voting, and absent. Your live roster stays visible beside the session.</p>
+              <div className="roll-call-actions">
+                <button type="button" onClick={() => setAttendance(Object.fromEntries(delegates.map((delegate) => [delegate.id, "present"])))}>Mark all present</button>
+                <button type="button" onClick={() => setAttendance(Object.fromEntries(delegates.map((delegate) => [delegate.id, "absent"])))}>Clear roll call</button>
+              </div>
+              <div className="roll-call-grid">
+                {delegates.map((delegate) => {
+                  const status = attendance[delegate.id] ?? "present";
+                  return <button key={delegate.id} type="button" onClick={() => setAttendance((current) => ({ ...current, [delegate.id]: nextAttendance(status) }))}><span className="country-mark">{countryMark(delegate.country)}</span><strong>{delegate.country}</strong><em className={status}>{status === "voting" ? "Present + voting" : status}</em></button>;
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          {view === "gsl" ? (
+            <div className="speaker-stage">
+              <div className="stage-eyebrow">General Speakers List</div>
+              {activeDelegate ? (
+                <>
+                  <div className="speaker-identity"><span className="speaker-mark">{countryMark(activeDelegate.country)}</span><strong>{activeDelegate.country}</strong><small>{speech.running ? "Speaking now" : speech.finished ? "Time elapsed" : "Ready to speak"}</small></div>
+                  <div className={`speaker-time${speech.finished ? " is-finished" : ""}`}>{display(speech.remaining)}</div>
+                  <div className="speaker-progress"><i style={{ width: `${Math.max(0, (speech.remaining / speech.duration) * 100)}%` }} /></div>
+                  <div className="speaker-controls">
+                    <button type="button" className="secondary-control" onClick={() => resetClock("speech")} aria-label="Reset speaker timer">↻</button>
+                    <button type="button" className="primary-control" onClick={() => toggleClock("speech")}>{speech.running ? "Pause" : "▶ Start"}</button>
+                    <button type="button" className="secondary-control next-control" onClick={callNextSpeaker} disabled={queue.length === 0}>Next →</button>
+                    <button type="button" className="secondary-control" onClick={() => addToQueue(activeDelegate.id)}>+ Queue</button>
+                  </div>
+                  <button type="button" className="reply-chip" onClick={() => setClockDuration("speech", 30)}>Right to reply · 0:30</button>
+                </>
+              ) : <div className="no-speaker"><span>◎</span><h2>No portfolio selected</h2><p>Add countries below, then select the first speaker.</p></div>}
+
+              <div className="speaker-dock">
+                <div className="duration-row"><span>Time</span>{SPEECH_PRESETS.map((seconds) => <button type="button" key={seconds} className={speech.duration === seconds ? "is-active" : ""} onClick={() => setClockDuration("speech", seconds)}>{seconds}s</button>)}</div>
+                <div className="speaker-queue" aria-label="Speaker queue"><span>Next speakers</span>{queueDelegates.length ? queueDelegates.map((delegate, index) => <button type="button" key={delegate.id} onClick={() => setQueue((current) => current.filter((id) => id !== delegate.id))} title="Remove from queue"><b>{index + 1}</b>{delegate.country}<i>×</i></button>) : <em>Select + beside a portfolio to build the queue.</em>}</div>
+              </div>
+            </div>
+          ) : null}
+
+          {view === "motions" ? (
+            <div className="motions-panel">
+              <div className="stage-eyebrow">Moderated & unmoderated caucus</div>
+              <h2>Run the motion. Keep the room moving.</h2>
+              <label><span>Motion on the floor</span><input value={motion} onChange={(event) => setMotion(event.target.value)} placeholder="e.g. 10 minutes, 60-second speaking time…" /></label>
+              <div className={`caucus-time${caucus.finished ? " is-finished" : ""}`}>{display(caucus.remaining)}</div>
+              <div className="speaker-progress caucus-progress"><i style={{ width: `${Math.max(0, (caucus.remaining / caucus.duration) * 100)}%` }} /></div>
+              <div className="caucus-presets">{CAUCUS_PRESETS.map((seconds) => <button type="button" key={seconds} className={caucus.duration === seconds ? "is-active" : ""} onClick={() => setClockDuration("caucus", seconds)}>{display(seconds)}</button>)}</div>
+              <div className="speaker-controls"><button type="button" className="secondary-control" onClick={() => resetClock("caucus")}>Reset</button><button type="button" className="primary-control" onClick={() => toggleClock("caucus")}>{caucus.running ? "Pause caucus" : "▶ Start caucus"}</button></div>
+            </div>
+          ) : null}
+        </main>
       </div>
     </section>
   );

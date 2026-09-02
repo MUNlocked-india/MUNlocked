@@ -4,27 +4,12 @@ import { COUNTRY_BUNDLES } from "@/lib/countryBundles";
 import RenameColumnInput from "@/components/RenameColumnInput";
 import SessionTimerDesk from "@/components/SessionTimerDesk";
 import ExportMarksheet from "@/components/ExportMarksheet";
-import {
-  inviteCoChair,
-  addDelegate,
-  addBundle,
-  removeDelegate,
-  updateMarks,
-  addColumn,
-  renameColumn,
-  removeColumn,
-} from "./actions";
+import { inviteCoChair, addDelegate, addBundle, removeDelegate, updateMarks, addColumn, renameColumn, removeColumn } from "./actions";
 
-export default async function CommitteePage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function CommitteePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { data: committee, error: committeeError } = await supabase
@@ -33,29 +18,18 @@ export default async function CommitteePage({
     .eq("id", id)
     .single();
 
-  if (committeeError || !committee) {
-    redirect("/committees");
-  }
+  if (committeeError || !committee) redirect("/committees");
 
-  const { data: members } = await supabase
-    .from("committee_members")
-    .select("email, role")
-    .eq("committee_id", id);
+  const [membersResult, columnsResult, delegatesResult] = await Promise.all([
+    supabase.from("committee_members").select("email, role").eq("committee_id", id),
+    supabase.from("marksheet_columns").select("id, key, label, position").eq("committee_id", id).order("position", { ascending: true }),
+    supabase.from("delegates").select("id, country, delegate_name, marks(custom_scores, notes, award)").eq("committee_id", id).order("country", { ascending: true }),
+  ]);
 
-  const { data: columns } = await supabase
-    .from("marksheet_columns")
-    .select("id, key, label, position")
-    .eq("committee_id", id)
-    .order("position", { ascending: true });
-
-  const { data: delegates } = await supabase
-    .from("delegates")
-    .select("id, country, delegate_name, marks(custom_scores, notes, award)")
-    .eq("committee_id", id)
-    .order("country", { ascending: true });
-
-  const cols = columns ?? [];
-  const columnKeys = cols.map((c) => c.key);
+  const members = membersResult.data ?? [];
+  const cols = columnsResult.data ?? [];
+  const delegates = delegatesResult.data ?? [];
+  const columnKeys = cols.map((column) => column.key);
 
   const boundInvite = inviteCoChair.bind(null, id);
   const boundAddDelegate = addDelegate.bind(null, id);
@@ -66,29 +40,28 @@ export default async function CommitteePage({
   const boundRenameColumn = renameColumn.bind(null, id);
   const boundRemoveColumn = removeColumn.bind(null, id);
 
-  // Totals per column, and best-delegate (highest sum across all columns).
-  const totals: Record<string, number> = {};
-  cols.forEach((c) => (totals[c.key] = 0));
+  const totals: Record<string, number> = Object.fromEntries(cols.map((column) => [column.key, 0]));
   let bestDelegateId: string | null = null;
   let bestDelegateTotal = -1;
 
-  delegates?.forEach((d) => {
-    const m = Array.isArray(d.marks) ? d.marks[0] : d.marks;
-    const scores = (m?.custom_scores ?? {}) as Record<string, number>;
+  for (const delegate of delegates) {
+    const mark = Array.isArray(delegate.marks) ? delegate.marks[0] : delegate.marks;
+    const scores = (mark?.custom_scores ?? {}) as Record<string, number>;
     let rowTotal = 0;
-    cols.forEach((c) => {
-      const v = Number(scores[c.key] ?? 0);
-      totals[c.key] += v;
-      rowTotal += v;
-    });
+    for (const column of cols) {
+      const value = Number(scores[column.key] ?? 0);
+      totals[column.key] += value;
+      rowTotal += value;
+    }
     if (rowTotal > bestDelegateTotal) {
       bestDelegateTotal = rowTotal;
-      bestDelegateId = d.id;
+      bestDelegateId = delegate.id;
     }
-  });
+  }
 
+  const bestDelegate = delegates.find((delegate) => delegate.id === bestDelegateId);
   const exportHeaders = ["Country", ...cols.map((column) => column.label), "Total", "Notes", "Award"];
-  const exportRows = (delegates ?? []).map((delegate) => {
+  const exportRows = delegates.map((delegate) => {
     const mark = Array.isArray(delegate.marks) ? delegate.marks[0] : delegate.marks;
     const scores = (mark?.custom_scores ?? {}) as Record<string, number>;
     const rowTotal = cols.reduce((sum, column) => sum + Number(scores[column.key] ?? 0), 0);
@@ -96,270 +69,103 @@ export default async function CommitteePage({
   });
 
   return (
-    <div style={{ minHeight: "100vh", padding: "48px 24px 120px" }}>
-      <style>{`@media (max-width: 700px) { .marks-summary { grid-template-columns: 1fr !important; } .marks-workspace { grid-template-columns: 1fr !important; } .marks-sidebar { position: static !important; } }`}</style>
-      <div style={{ maxWidth: 1300, margin: "0 auto" }}>
-        <div className="mono" style={{ fontSize: 11, letterSpacing: 2, color: "var(--coral)", textTransform: "uppercase", marginBottom: 10 }}>
-          File No. IN/MUN/MARKSHEET/{committee!.code}
-        </div>
-        <h1 style={{ fontFamily: "Georgia, serif", fontSize: 32, marginBottom: 6 }}>
-          {committee!.name} <span style={{ color: "var(--coral)" }}>({committee!.code})</span>
-        </h1>
-        {committee!.conference_name && (
-          <p className="mono" style={{ fontSize: 12, color: "rgba(234,217,222,0.55)", marginBottom: 30 }}>{committee!.conference_name}</p>
-        )}
+    <div className="marksheet-studio">
+      <div className="marksheet-studio-glow" aria-hidden="true" />
+      <div className="marksheet-studio-shell">
+        <header className="marksheet-intro">
+          <div>
+            <p className="marksheet-kicker">MUNlocked · Digital dais workspace</p>
+            <h1>{committee.name}</h1>
+            <div className="marksheet-meta"><span>{committee.code}</span>{committee.conference_name ? <span>{committee.conference_name}</span> : null}<span>{delegates.length} portfolios</span></div>
+          </div>
+          <div className="marksheet-intro-note"><i aria-hidden="true">01</i><p>Run roll call, speakers, motions and scoring from one calm live workspace.</p></div>
+        </header>
 
-        <div className="marks-summary" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 12, marginBottom: 18 }}>
-          {[
-            ["ACTIVE PORTFOLIOS", String(delegates?.length ?? 0), "Live scoring roster"],
-            ["SCORING SIGNALS", String(cols.length), "SIS/HCC grading columns"],
-            ["LEADING DELEGATE", bestDelegateId ? (delegates?.find((delegate) => delegate.id === bestDelegateId)?.country ?? "—") : "—", bestDelegateId ? `${bestDelegateTotal.toFixed(1)} recorded points` : "Scores will reveal the lead"],
-          ].map(([label, value, hint]) => <div key={label} style={{ position: "relative", overflow: "hidden", background: "linear-gradient(135deg, rgba(201,138,148,.15), rgba(16,16,17,.94) 70%)", border: "1px solid rgba(234,217,222,.13)", borderRadius: 13, padding: "15px 16px" }}><div className="mono" style={{ fontSize: 9, color: "var(--coral)", letterSpacing: 1.2, marginBottom: 7 }}>{label}</div><strong style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "Georgia, serif", fontSize: 20, color: "var(--text)" }}>{value}</strong><span style={{ fontSize: 10.5, color: "rgba(234,217,222,.45)" }}>{hint}</span></div>)}
+        <div className="marksheet-summary">
+          <article><span>Portfolios</span><strong>{delegates.length}</strong><p>Live committee roster</p></article>
+          <article><span>Scoring signals</span><strong>{cols.length}</strong><p>Editable grading criteria</p></article>
+          <article className="leader-card"><span>Current lead</span><strong>{bestDelegate?.country ?? "No scores yet"}</strong><p>{bestDelegate ? `${bestDelegateTotal.toFixed(1)} recorded points` : "The board updates as the dais scores"}</p></article>
         </div>
 
-        <SessionTimerDesk />
+        <SessionTimerDesk delegates={delegates.map(({ id: delegateId, country }) => ({ id: delegateId, country }))} committeeName={committee.name} committeeCode={committee.code} conferenceName={committee.conference_name} />
 
-        <div className="marks-workspace" style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 24, alignItems: "flex-start" }}>
-          {/* ---------- LEFT SIDEBAR: roster tools ---------- */}
-          <div className="marks-sidebar" style={{ display: "flex", flexDirection: "column", gap: 18, position: "sticky", top: 20 }}>
-            <div style={{ background: "#0F0F10", border: "1px solid rgba(234,217,222,0.1)", borderRadius: 14, padding: 20 }}>
-              <h2 style={{ fontFamily: "Georgia, serif", fontSize: 15, marginBottom: 12 }}>Quick-Add Bundles</h2>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {Object.keys(COUNTRY_BUNDLES).map((bundle) => (
-                  <form action={boundAddBundle} key={bundle}>
-                    <input type="hidden" name="bundle" value={bundle} />
-                    <button type="submit" className="mono" style={{ width: "100%", textAlign: "left", fontSize: 11.5, border: "1px solid rgba(201,138,148,0.35)", background: "rgba(201,138,148,0.06)", color: "var(--coral)", padding: "8px 12px", borderRadius: 8, cursor: "pointer" }}>
-                      + {bundle}
-                    </button>
-                  </form>
-                ))}
-              </div>
-              <form action={boundAddDelegate} style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 14 }}>
-                <input
-                  type="text"
-                  name="country"
-                  placeholder="Add single country…"
-                  required
-                  style={{ background: "#1A1A1B", border: "1px solid rgba(234,217,222,0.15)", color: "var(--text)", padding: "9px 11px", borderRadius: 8, fontSize: 12.5 }}
-                />
-                <button type="submit" className="mono" style={{ background: "none", border: "1.5px solid rgba(234,217,222,0.3)", color: "var(--text)", padding: "8px 0", borderRadius: 8, fontSize: 11, fontWeight: 700, textTransform: "uppercase", cursor: "pointer" }}>
-                  Add
-                </button>
-              </form>
-            </div>
-
-            <div style={{ background: "#0F0F10", border: "1px solid rgba(234,217,222,0.1)", borderRadius: 14, padding: 20 }}>
-              <h2 style={{ fontFamily: "Georgia, serif", fontSize: 15, marginBottom: 8 }}>Export Record</h2>
-              <p className="mono" style={{ fontSize: 10, color: "rgba(234,217,222,.45)", lineHeight: 1.5, marginBottom: 12 }}>Download the current live scores, notes and awards for records or offline sharing.</p>
-              <ExportMarksheet fileName={`${committee.code || committee.name}-marksheet`} headers={exportHeaders} rows={exportRows} />
-            </div>
-
-            <div style={{ background: "#0F0F10", border: "1px solid rgba(234,217,222,0.1)", borderRadius: 14, padding: 20 }}>
-              <h2 style={{ fontFamily: "Georgia, serif", fontSize: 15, marginBottom: 12 }}>Dais &amp; Sharing</h2>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
-                {members?.map((m) => (
-                  <span key={m.email} className="mono" style={{ fontSize: 10.5, background: "rgba(234,217,222,0.08)", padding: "5px 9px", borderRadius: 8, color: "rgba(234,217,222,0.75)" }}>
-                    {m.email} · {m.role === "chair" ? "Chair" : "Co-Chair"}
-                  </span>
-                ))}
-              </div>
-              <form action={boundInvite} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="co-chair@school.edu"
-                  required
-                  style={{ background: "#1A1A1B", border: "1px solid rgba(234,217,222,0.15)", color: "var(--text)", padding: "9px 11px", borderRadius: 8, fontSize: 12 }}
-                />
-                <button type="submit" className="mono" style={{ background: "var(--paper)", color: "var(--ink)", border: "none", padding: "8px 0", borderRadius: 8, fontSize: 11, fontWeight: 700, textTransform: "uppercase", cursor: "pointer" }}>
-                  Invite to Dais
-                </button>
-              </form>
-              <p className="mono" style={{ fontSize: 10, color: "rgba(234,217,222,0.4)", marginTop: 10, lineHeight: 1.5 }}>
-                Invited co-chairs and MUNlocked admins see this exact live sheet.
-              </p>
-            </div>
-
-            <div style={{ background: "#0F0F10", border: "1px solid rgba(234,217,222,0.1)", borderRadius: 14, padding: 20 }}>
-              <h2 style={{ fontFamily: "Georgia, serif", fontSize: 15, marginBottom: 12 }}>Add Grading Column</h2>
-              <form action={boundAddColumn} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <input
-                  type="text"
-                  name="label"
-                  placeholder="e.g. Position Paper"
-                  required
-                  style={{ background: "#1A1A1B", border: "1px solid rgba(234,217,222,0.15)", color: "var(--text)", padding: "9px 11px", borderRadius: 8, fontSize: 12.5 }}
-                />
-                <button type="submit" className="mono" style={{ background: "var(--brass)", color: "var(--ink)", border: "none", padding: "8px 0", borderRadius: 8, fontSize: 11, fontWeight: 700, textTransform: "uppercase", cursor: "pointer" }}>
-                  + Add Column
-                </button>
-              </form>
-            </div>
+        <section id="marksheet" className="marksheet-record-section">
+          <div className="marksheet-section-heading">
+            <div><p>02 · Assessment room</p><h2>The live marksheet</h2></div>
+            <div className="marksheet-heading-copy">Every score, private note and award stays in one shared record for the dais.</div>
           </div>
 
-          {/* ---------- RIGHT: the marksheet grid ---------- */}
-          <div style={{ background: "#0F0F10", border: "1px solid rgba(234,217,222,0.1)", borderRadius: 14, padding: 22, overflowX: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
-              <h2 style={{ fontFamily: "Georgia, serif", fontSize: 17 }}>Marksheet ({delegates?.length ?? 0} delegates)</h2>
-              {bestDelegateId && (
-                <span className="mono" style={{ fontSize: 10.5, background: "rgba(199,166,107,0.15)", border: "1px solid var(--brass)", color: "var(--brass)", padding: "5px 10px", borderRadius: 20, textTransform: "uppercase" }}>
-                  🏆 Best Delegate: {delegates?.find((d) => d.id === bestDelegateId)?.country}
-                </span>
-              )}
+          <div className="marksheet-record-layout">
+            <aside className="marksheet-toolrail">
+              <details open>
+                <summary><span>Build roster</span><i>+</i></summary>
+                <div className="toolrail-content">
+                  <p>Add a recognised bloc in one click, or type a single portfolio.</p>
+                  <div className="bundle-grid">
+                    {Object.keys(COUNTRY_BUNDLES).map((bundle) => <form action={boundAddBundle} key={bundle}><input type="hidden" name="bundle" value={bundle} /><button type="submit">+ {bundle}</button></form>)}
+                  </div>
+                  <form action={boundAddDelegate} className="toolrail-inline-form"><input type="text" name="country" placeholder="Add a single country…" required /><button type="submit">Add</button></form>
+                </div>
+              </details>
+
+              <details>
+                <summary><span>Scoring criteria</span><i>+</i></summary>
+                <div className="toolrail-content"><p>Add any conference-specific signal to the default sheet.</p><form action={boundAddColumn} className="toolrail-inline-form"><input type="text" name="label" placeholder="e.g. Position paper" required /><button type="submit">Add</button></form></div>
+              </details>
+
+              <details>
+                <summary><span>Export record</span><i>+</i></summary>
+                <div className="toolrail-content"><p>Download live scores, notes and awards as a clean CSV record.</p><ExportMarksheet fileName={`${committee.code || committee.name}-marksheet`} headers={exportHeaders} rows={exportRows} /></div>
+              </details>
+            </aside>
+
+            <div className="marksheet-sheet-card">
+              <div className="marksheet-sheet-head">
+                <div><span>Live scoring</span><h3>{delegates.length} delegate{delegates.length === 1 ? "" : "s"}</h3></div>
+                {bestDelegate ? <span className="best-delegate-pill">★ Best delegate · {bestDelegate.country}</span> : null}
+              </div>
+
+              {delegates.length === 0 ? <div className="marksheet-empty"><span>＋</span><h3>Your scoring room is ready.</h3><p>Add a country or a quick bundle from the panel beside the sheet.</p></div> : null}
+              {delegates.length > 0 && cols.length === 0 ? <div className="marksheet-empty"><span>＋</span><h3>Add your first criterion.</h3><p>Open “Scoring criteria” and build the sheet your conference needs.</p></div> : null}
+
+              {delegates.length > 0 && cols.length > 0 ? (
+                <div className="marksheet-table-wrap">
+                  <table className="marksheet-table">
+                    <thead><tr><th>Portfolio</th>{cols.map((column) => <th key={column.id}><div className="column-heading"><RenameColumnInput action={boundRenameColumn} columnId={column.id} defaultLabel={column.label} /><form action={boundRemoveColumn}><input type="hidden" name="column_id" value={column.id} /><button type="submit" title="Remove criterion" aria-label={`Remove ${column.label}`}>×</button></form></div></th>)}<th>Total</th><th>Chair notes</th><th>Award</th><th><span className="sr-only">Actions</span></th></tr></thead>
+                    <tbody>
+                      {delegates.map((delegate) => {
+                        const mark = Array.isArray(delegate.marks) ? delegate.marks[0] : delegate.marks;
+                        const scores = (mark?.custom_scores ?? {}) as Record<string, number>;
+                        const rowTotal = cols.reduce((sum, column) => sum + Number(scores[column.key] ?? 0), 0);
+                        const isBest = delegate.id === bestDelegateId;
+                        return (
+                          <tr key={delegate.id} className={isBest ? "is-leading" : ""}>
+                            <td><form action={boundUpdateMarks} id={`form-${delegate.id}`}><input type="hidden" name="delegate_id" value={delegate.id} /></form><span className="portfolio-name">{isBest ? <i>★</i> : null}{delegate.country}</span></td>
+                            {cols.map((column) => <td key={column.id}><input className="score-input" type="number" min={0} step="0.5" name={`col_${column.key}`} form={`form-${delegate.id}`} defaultValue={scores[column.key] ?? 0} aria-label={`${column.label} score for ${delegate.country}`} /></td>)}
+                            <td><strong className="row-total">{rowTotal.toFixed(1)}</strong></td>
+                            <td><input className="notes-input" type="text" name="notes" form={`form-${delegate.id}`} defaultValue={mark?.notes ?? ""} placeholder="Add a note…" aria-label={`Notes for ${delegate.country}`} /></td>
+                            <td><select className="award-select" name="award" form={`form-${delegate.id}`} defaultValue={mark?.award ?? ""} aria-label={`Award for ${delegate.country}`}><option value="">No award</option><option>Best Delegate</option><option>High Commendation</option><option>Special Mention</option><option>Verbal Mention</option></select></td>
+                            <td><div className="row-actions"><button type="submit" form={`form-${delegate.id}`} className="save-score">Save</button><form action={boundRemove}><input type="hidden" name="delegate_id" value={delegate.id} /><button type="submit" className="remove-portfolio" aria-label={`Remove ${delegate.country}`}>×</button></form></div></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot><tr><td>Column totals</td>{cols.map((column) => <td key={column.id}>{totals[column.key]}</td>)}<td>—</td><td /><td /><td /></tr></tfoot>
+                  </table>
+                </div>
+              ) : null}
             </div>
-
-            {(!delegates || delegates.length === 0) && (
-              <p style={{ color: "rgba(234,217,222,0.5)", fontSize: 13.5 }}>No delegates yet — use a bundle or add a country on the left to start grading.</p>
-            )}
-
-            {delegates && delegates.length > 0 && cols.length > 0 && (
-              <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900 }}>
-                <thead>
-                  <tr>
-                    <th style={thStyle}>Country</th>
-                    {cols.map((c) => (
-                      <th key={c.id} style={{ ...thStyle, minWidth: 92 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <RenameColumnInput action={boundRenameColumn} columnId={c.id} defaultLabel={c.label} />
-                          <form action={boundRemoveColumn}>
-                            <input type="hidden" name="column_id" value={c.id} />
-                            <button type="submit" title="Remove column" style={{ background: "none", border: "none", color: "rgba(234,217,222,0.3)", cursor: "pointer", fontSize: 11, padding: 0 }}>✕</button>
-                          </form>
-                        </div>
-                      </th>
-                    ))}
-                    <th style={{ ...thStyle, minWidth: 66 }}>Total</th>
-                    <th style={thStyle}>Notes</th>
-                    <th style={thStyle}>Award</th>
-                    <th style={thStyle}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {delegates.map((d) => {
-                    const m = Array.isArray(d.marks) ? d.marks[0] : d.marks;
-                    const scores = (m?.custom_scores ?? {}) as Record<string, number>;
-                    const rowTotal = cols.reduce((sum, column) => sum + Number(scores[column.key] ?? 0), 0);
-                    const isBest = d.id === bestDelegateId;
-                    return (
-                      <tr key={d.id} style={isBest ? { background: "rgba(199,166,107,0.06)" } : undefined}>
-                        <td style={tdStyle}>
-                          <form action={boundUpdateMarks} id={`form-${d.id}`}>
-                            <input type="hidden" name="delegate_id" value={d.id} />
-                          </form>
-                          <span className="mono" style={{ fontSize: 13 }}>{isBest ? "🏆 " : ""}{d.country}</span>
-                        </td>
-                        {cols.map((c) => (
-                          <td key={c.id} style={tdStyle}>
-                            <input
-                              type="number"
-                              min={0}
-                              name={`col_${c.key}`}
-                              form={`form-${d.id}`}
-                              defaultValue={scores[c.key] ?? 0}
-                              style={numInputStyle}
-                            />
-                          </td>
-                        ))}
-                        <td style={{ ...tdStyle, fontFamily: "IBM Plex Mono, monospace", color: isBest ? "var(--brass)" : "rgba(234,217,222,.72)", fontWeight: 700, textAlign: "center" }}>{rowTotal.toFixed(1)}</td>
-                        <td style={tdStyle}>
-                          <input type="text" name="notes" form={`form-${d.id}`} defaultValue={m?.notes ?? ""} placeholder="—" style={notesInputStyle} />
-                        </td>
-                        <td style={tdStyle}>
-                          <select name="award" form={`form-${d.id}`} defaultValue={m?.award ?? ""} style={{ ...notesInputStyle, width: 150 }}>
-                            <option value="">—</option><option>Best Delegate</option><option>High Commendation</option><option>Special Mention</option><option>Verbal Mention</option>
-                          </select>
-                        </td>
-                        <td style={tdStyle}>
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <button type="submit" form={`form-${d.id}`} className="mono" style={saveBtnStyle}>Save</button>
-                            <form action={boundRemove}>
-                              <input type="hidden" name="delegate_id" value={d.id} />
-                              <button type="submit" className="mono" style={removeBtnStyle}>✕</button>
-                            </form>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr style={{ borderTop: "2px solid rgba(234,217,222,0.15)" }}>
-                    <td style={{ ...tdStyle, fontFamily: "IBM Plex Mono, monospace", fontSize: 11, textTransform: "uppercase", color: "var(--brass)" }}>Totals</td>
-                    {cols.map((c) => (
-                      <td key={c.id} style={{ ...tdStyle, fontFamily: "IBM Plex Mono, monospace", fontSize: 12.5, color: "var(--brass)", fontWeight: 700, textAlign: "center" }}>
-                        {totals[c.key]}
-                      </td>
-                    ))}
-                    <td style={{ ...tdStyle, color: "var(--brass)", fontFamily: "IBM Plex Mono, monospace", fontWeight: 700 }}>—</td>
-                    <td style={tdStyle}></td>
-                    <td style={tdStyle}></td>
-                    <td style={tdStyle}></td>
-                  </tr>
-                </tfoot>
-              </table>
-            )}
-
-            {cols.length === 0 && (
-              <p style={{ color: "rgba(234,217,222,0.5)", fontSize: 13.5 }}>No grading columns yet — add one from the left sidebar.</p>
-            )}
           </div>
-        </div>
+        </section>
+
+        <section id="dais-sharing" className="dais-sharing-section">
+          <div className="dais-sharing-copy"><p>03 · Shared dais</p><h2>One room. One record.</h2><span>Invite a co-chair by email. They receive access to this exact committee and can keep the session moving with you.</span></div>
+          <div className="dais-sharing-card">
+            <div className="dais-members">{members.map((member) => <div key={member.email}><span>{member.email.slice(0, 1).toUpperCase()}</span><p><strong>{member.email}</strong><small>{member.role === "chair" ? "Chair" : "Co-chair"}</small></p></div>)}</div>
+            <form action={boundInvite} className="dais-invite-form"><label htmlFor="co-chair-email">Invite another member of the dais</label><div><input id="co-chair-email" type="email" name="email" placeholder="co-chair@school.edu" required /><button type="submit">Send invitation →</button></div></form>
+          </div>
+        </section>
       </div>
     </div>
   );
 }
-
-const thStyle: React.CSSProperties = {
-  textAlign: "left",
-  fontFamily: "IBM Plex Mono, monospace",
-  fontSize: 10.5,
-  letterSpacing: 0.5,
-  textTransform: "uppercase",
-  color: "rgba(234,217,222,0.5)",
-  padding: "8px 10px",
-  borderBottom: "1px solid rgba(234,217,222,0.12)",
-};
-const tdStyle: React.CSSProperties = {
-  padding: "8px 10px",
-  borderBottom: "1px solid rgba(234,217,222,0.06)",
-  verticalAlign: "middle",
-};
-const numInputStyle: React.CSSProperties = {
-  width: 48,
-  background: "#1A1A1B",
-  border: "1px solid rgba(234,217,222,0.15)",
-  color: "var(--text)",
-  padding: "6px 6px",
-  borderRadius: 6,
-  fontSize: 12.5,
-  textAlign: "center",
-};
-const notesInputStyle: React.CSSProperties = {
-  width: 130,
-  background: "#1A1A1B",
-  border: "1px solid rgba(234,217,222,0.15)",
-  color: "var(--text)",
-  padding: "6px 8px",
-  borderRadius: 6,
-  fontSize: 12,
-};
-const saveBtnStyle: React.CSSProperties = {
-  background: "var(--paper)",
-  color: "var(--ink)",
-  border: "none",
-  padding: "6px 10px",
-  borderRadius: 6,
-  fontSize: 10.5,
-  fontWeight: 700,
-  textTransform: "uppercase",
-  cursor: "pointer",
-};
-const removeBtnStyle: React.CSSProperties = {
-  background: "none",
-  color: "#e59aa8",
-  border: "1px solid #8B1E3F",
-  padding: "6px 9px",
-  borderRadius: 6,
-  fontSize: 11,
-  cursor: "pointer",
-};
