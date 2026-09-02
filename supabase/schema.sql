@@ -197,9 +197,9 @@ create policy "Members and admins can view committees"
   on public.committees for select to authenticated
   using (public.can_access_committee(id));
 
-create policy "Any signed-in user can create a committee"
+create policy "Authenticated users can create their committees"
   on public.committees for insert to authenticated
-  with check (created_by = auth.uid());
+  with check (created_by = (select auth.uid()));
 
 create policy "Members can view committee_members"
   on public.committee_members for select to authenticated
@@ -250,12 +250,21 @@ create table public.eb_applications (
   applicant_email text not null,
   bio text not null,
   experience text not null,
+  eb_experience text not null default '',
+  delegate_experience text not null default '',
   areas_of_expertise text[] not null default '{}',
+  remuneration_expectations jsonb not null default '{}'::jsonb,
   previous_conferences text,
+  display_name text,
+  photo_path text,
+  cv_path text,
   status public.eb_application_status not null default 'pending',
   reviewed_by uuid references public.profiles(id),
   review_note text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  removed_at timestamptz,
+  removed_by uuid references public.profiles(id),
+  removal_note text
 );
 
 alter table public.eb_applications enable row level security;
@@ -273,10 +282,15 @@ create policy "Admins can view all EB applications"
   on public.eb_applications for select to authenticated
   using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
 
--- Always inserted as pending, regardless of what the client sends.
-create policy "Signed-in users can apply as an EB member"
+-- A member's profile becomes visible immediately; administrators retain removal powers.
+create policy "Users can publish their own EB profile"
   on public.eb_applications for insert to authenticated
-  with check (auth.uid() = applicant_id and status = 'pending');
+  with check (applicant_id = (select auth.uid()) and status = 'approved' and removed_at is null);
+
+create policy "Users can update their own EB profile"
+  on public.eb_applications for update to authenticated
+  using (applicant_id = (select auth.uid()) and status = 'approved' and removed_at is null)
+  with check (applicant_id = (select auth.uid()) and status = 'approved' and removed_at is null);
 
 create policy "Only admins can update EB application status"
   on public.eb_applications for update to authenticated
@@ -284,6 +298,8 @@ create policy "Only admins can update EB application status"
   with check (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
 
 create index eb_applications_status_idx on public.eb_applications (status);
+create unique index eb_applications_one_live_profile_per_member_idx
+  on public.eb_applications (applicant_id) where removed_at is null and status = 'approved';
 
 -- 8. Research Library ----------------------------------------------------------
 create type public.research_status as enum ('pending', 'approved', 'rejected');

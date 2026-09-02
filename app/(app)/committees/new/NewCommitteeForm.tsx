@@ -62,7 +62,7 @@ export default function NewCommitteeForm({
 
       <label style={{ display: "flex", gap: 9, alignItems: "center", marginBottom: 18, textTransform: "none", letterSpacing: 0, fontSize: 13 }}>
         <input type="checkbox" name="sis_marksheet" defaultChecked />
-        Use the SIS/HCC marksheet preset (GSL, MOD 1/2, POI, chits, documentation, decorum, awards)
+        Use the default marksheet
       </label>
 
       <button type="submit" className="submit">Create Committee</button>

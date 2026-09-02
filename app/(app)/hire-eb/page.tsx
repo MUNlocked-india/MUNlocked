@@ -12,7 +12,7 @@ export default async function HireEbPage({ searchParams }: { searchParams: Promi
 
   const { data: ebs, error } = await supabase
     .from("eb_applications")
-    .select("id, applicant_id, applicant_email, display_name, bio, experience, areas_of_expertise, previous_conferences, photo_path, cv_path, created_at")
+    .select("id, applicant_id, applicant_email, display_name, bio, experience, eb_experience, delegate_experience, remuneration_expectations, areas_of_expertise, previous_conferences, photo_path, cv_path, created_at")
     .eq("status", "approved")
     .order("created_at", { ascending: false });
 
@@ -98,6 +98,11 @@ export default async function HireEbPage({ searchParams }: { searchParams: Promi
               })()}
               <p style={{ fontSize: 13.5, lineHeight: 1.6, marginBottom: 10, color: "rgba(7,7,7,0.75)" }}>{eb.bio}</p>
               <p className="mono" style={{ fontSize: 11, color: "rgba(7,7,7,0.55)", marginBottom: 10 }}>{eb.experience}</p>
+              {Object.values((eb.remuneration_expectations ?? {}) as Record<string, string>).some(Boolean) && (
+                <p className="mono" style={{ fontSize: 10, color: "rgba(7,7,7,0.52)", marginBottom: 10 }}>
+                  {Object.entries((eb.remuneration_expectations ?? {}) as Record<string, string>).filter(([, value]) => value).map(([role, value]) => `${role.replaceAll("_", " ")} · ${value}`).join("  /  ")}
+                </p>
+              )}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {eb.areas_of_expertise?.map((a: string) => (
                   <span key={a} className="mono" style={{ fontSize: 10, border: "1px solid rgba(7,7,7,0.25)", padding: "2px 8px", borderRadius: 20, color: "rgba(7,7,7,0.65)" }}>
