@@ -20,8 +20,9 @@ export async function submitEbApplication(formData: FormData) {
   const delegateExperience = String(formData.get("delegate_experience") || "").trim();
   const areas = formData.getAll("areas_of_expertise").map(String).map((area) => area.trim()).filter(Boolean);
   const remuneration = Object.fromEntries(EB_ROLES.map(({ key }) => [key, String(formData.get(`remuneration_${key}`) || "").trim()]));
-  if (!bio || !ebExperience || !delegateExperience || areas.length === 0 || Object.values(remuneration).some((value) => !value)) {
-    errorRedirect("Complete your bio, both experience sections, expertise and remuneration preferences.");
+  const numericExperience = /^\d+$/;
+  if (!bio || !numericExperience.test(ebExperience) || !numericExperience.test(delegateExperience) || areas.length === 0 || Object.values(remuneration).some((value) => !value)) {
+    errorRedirect("Complete every field: choose at least one expertise and enter whole-number experience counts.");
   }
 
   const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
@@ -43,7 +44,7 @@ export async function submitEbApplication(formData: FormData) {
   ]);
   if (photoUpload.error || cvUpload.error) errorRedirect(photoUpload.error?.message || cvUpload.error?.message || "We could not upload your files. Please try again.");
 
-  const experience = `Executive Board experience:\n${ebExperience}\n\nDelegate experience:\n${delegateExperience}`;
+  const experience = `Executive Board experience: ${ebExperience} conference${ebExperience === "1" ? "" : "s"}\nDelegate experience: ${delegateExperience} conference${delegateExperience === "1" ? "" : "s"}`;
   const { error } = await supabase.from("eb_applications").insert({
     applicant_id: user.id,
     applicant_email: user.email,
