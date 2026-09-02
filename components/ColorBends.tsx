@@ -2,9 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-type ColorBendsProps = {
-  className?: string;
-};
+type ColorBendsProps = { className?: string };
 
 const fragmentShader = `
   precision highp float;
@@ -12,7 +10,6 @@ const fragmentShader = `
   uniform float uTime;
   uniform vec2 uPointer;
   varying vec2 vUv;
-
   vec3 palette(float t) {
     vec3 a = vec3(0.01, 0.01, 0.01);
     vec3 b = vec3(0.11, 0.11, 0.12);
@@ -20,7 +17,6 @@ const fragmentShader = `
     vec3 d = vec3(0.08, 0.12, 0.18);
     return a + b * cos(6.28318 * (c * t + d));
   }
-
   void main() {
     vec2 p = vUv * 2.0 - 1.0;
     p.x *= uCanvas.x / max(uCanvas.y, 1.0);
@@ -52,89 +48,117 @@ export default function ColorBends({ className }: ColorBendsProps) {
     const container = containerRef.current;
     if (!container) return;
 
-    const canvas = document.createElement("canvas");
-    canvas.setAttribute("aria-hidden", "true");
-    const gl = canvas.getContext("webgl", { alpha: true, antialias: false });
-    if (!gl) return;
-    container.appendChild(canvas);
+    let cleanup = () => {};
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.setAttribute("aria-hidden", "true");
+      const gl = canvas.getContext("webgl", { alpha: true, antialias: false, powerPreference: "low-power" });
+      if (!gl) return;
 
-    const compile = (type: number, source: string) => {
-      const shader = gl.createShader(type)!;
-      gl.shaderSource(shader, source);
-      gl.compileShader(shader);
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.warn("MUNlocked background shader could not compile:", gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
-        return null;
-      }
-      return shader;
-    };
-    const vertex = compile(gl.VERTEX_SHADER, vertexShader);
-    const fragment = compile(gl.FRAGMENT_SHADER, fragmentShader);
-    if (!vertex || !fragment) return;
-    const program = gl.createProgram()!;
-    gl.attachShader(program, vertex);
-    gl.attachShader(program, fragment);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      console.warn("MUNlocked background shader could not link:", gl.getProgramInfoLog(program));
-      gl.deleteProgram(program);
-      return;
-    }
-    gl.useProgram(program);
-    const buffer = gl.createBuffer()!;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    const position = gl.getAttribLocation(program, "position");
-    gl.enableVertexAttribArray(position);
-    gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-    const canvasUniform = gl.getUniformLocation(program, "uCanvas");
-    const timeUniform = gl.getUniformLocation(program, "uTime");
-    const pointerUniform = gl.getUniformLocation(program, "uPointer");
-    let pointerX = 0;
-    let pointerY = 0;
+      const compile = (type: number, source: string) => {
+        const shader = gl.createShader(type);
+        if (!shader) return null;
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          gl.deleteShader(shader);
+          return null;
+        }
+        return shader;
+      };
 
-    const resize = () => {
-      const width = container.clientWidth || 1;
-      const height = container.clientHeight || 1;
-      const ratio = Math.min(window.devicePixelRatio, 2);
-      canvas.width = width * ratio;
-      canvas.height = height * ratio;
-      canvas.style.width = "100%";
-      canvas.style.height = "100%";
-      gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.uniform2f(canvasUniform, width, height);
-    };
-    const move = (event: PointerEvent) => {
-      const rect = container.getBoundingClientRect();
-      pointerX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      pointerY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    };
-    const observer = new ResizeObserver(resize);
-    observer.observe(container);
-    window.addEventListener("pointermove", move, { passive: true });
-    resize();
+      const vertex = compile(gl.VERTEX_SHADER, vertexShader);
+      const fragment = compile(gl.FRAGMENT_SHADER, fragmentShader);
+      if (!vertex || !fragment) return;
+      const program = gl.createProgram();
+      const buffer = gl.createBuffer();
+      if (!program || !buffer) return;
+      gl.attachShader(program, vertex);
+      gl.attachShader(program, fragment);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return;
 
-    const startedAt = performance.now();
-    let frame = 0;
-    const render = () => {
-      gl.uniform1f(timeUniform, (performance.now() - startedAt) / 1000);
-      gl.uniform2f(pointerUniform, pointerX, pointerY);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.useProgram(program);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      const position = gl.getAttribLocation(program, "position");
+      if (position < 0) return;
+      gl.enableVertexAttribArray(position);
+      gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+      const canvasUniform = gl.getUniformLocation(program, "uCanvas");
+      const timeUniform = gl.getUniformLocation(program, "uTime");
+      const pointerUniform = gl.getUniformLocation(program, "uPointer");
+      if (!canvasUniform || !timeUniform || !pointerUniform) return;
+
+      container.appendChild(canvas);
+      let pointerX = 0;
+      let pointerY = 0;
+      let frame = 0;
+      let stopped = false;
+
+      const resize = () => {
+        const width = container.clientWidth || 1;
+        const height = container.clientHeight || 1;
+        const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+        canvas.width = Math.max(1, Math.floor(width * ratio));
+        canvas.height = Math.max(1, Math.floor(height * ratio));
+        canvas.style.width = "100%";
+        canvas.style.height = "100%";
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.uniform2f(canvasUniform, width, height);
+      };
+      const move = (event: PointerEvent) => {
+        const rect = container.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        pointerX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointerY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      };
+      const stop = (event?: Event) => {
+        event?.preventDefault();
+        stopped = true;
+        cancelAnimationFrame(frame);
+        canvas.style.display = "none";
+      };
+      const render = (now: number) => {
+        if (stopped || gl.isContextLost()) return;
+        try {
+          gl.uniform1f(timeUniform, now / 1000);
+          gl.uniform2f(pointerUniform, pointerX, pointerY);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+          frame = requestAnimationFrame(render);
+        } catch {
+          stop();
+        }
+      };
+
+      const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(resize);
+      observer?.observe(container);
+      window.addEventListener("resize", resize, { passive: true });
+      window.addEventListener("pointermove", move, { passive: true });
+      canvas.addEventListener("webglcontextlost", stop);
+      resize();
       frame = requestAnimationFrame(render);
-    };
-    render();
 
-    return () => {
-      cancelAnimationFrame(frame);
-      observer.disconnect();
-      window.removeEventListener("pointermove", move);
-      gl.deleteBuffer(buffer);
-      gl.deleteProgram(program);
-      gl.deleteShader(vertex);
-      gl.deleteShader(fragment);
+      cleanup = () => {
+        stopped = true;
+        cancelAnimationFrame(frame);
+        observer?.disconnect();
+        window.removeEventListener("resize", resize);
+        window.removeEventListener("pointermove", move);
+        canvas.removeEventListener("webglcontextlost", stop);
+        canvas.remove();
+        if (!gl.isContextLost()) {
+          gl.deleteBuffer(buffer);
+          gl.deleteProgram(program);
+          gl.deleteShader(vertex);
+          gl.deleteShader(fragment);
+        }
+      };
+    } catch (error) {
+      console.warn("MUNlocked background switched to its CSS fallback.", error);
       container.replaceChildren();
-    };
+    }
+    return () => cleanup();
   }, []);
 
   return <div ref={containerRef} className={className} />;
