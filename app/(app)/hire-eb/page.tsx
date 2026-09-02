@@ -88,31 +88,34 @@ export default async function HireEbPage({ searchParams }: { searchParams: Promi
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 22 }}>
           {profiles.map((eb) => (
-            <SpotlightCard key={eb.id} className="munlocked-card-hover" style={{ background: "var(--paper)", color: "var(--ink)", borderRadius: 14, padding: 22, boxShadow: "5px 6px 0 rgba(156,110,130,0.2)", transition: "transform 0.25s ease, box-shadow 0.25s ease" }}>
-              {eb.photoUrl ? <img src={eb.photoUrl} alt={`Formal profile photo of ${eb.display_name ?? "Executive Board member"}`} style={{ width: 62, height: 62, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--coral)", marginBottom: 12 }} /> : <div style={{ width: 62, height: 62, borderRadius: "50%", background: "linear-gradient(135deg, var(--mauve), var(--coral))", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--paper)", fontFamily: "Georgia, serif", fontSize: 20, marginBottom: 12 }}>{(eb.display_name ?? eb.applicant_email)[0]?.toUpperCase()}</div>}
-              <h2 style={{ fontFamily: "Georgia, serif", fontSize: 20, marginBottom: 6 }}>{eb.display_name ?? "Executive Board"}</h2>
+            <SpotlightCard key={eb.id} className="munlocked-card-hover" style={{ minHeight: 490, borderRadius: 16, boxShadow: "5px 6px 0 rgba(156,110,130,0.2)", transition: "transform 0.25s ease, box-shadow 0.25s ease", backgroundColor: "#111012", backgroundImage: eb.photoUrl ? `url("${eb.photoUrl}")` : "linear-gradient(135deg, #6a4351, #161218 70%)", backgroundSize: "cover", backgroundPosition: "center" }}>
+              <div style={{ minHeight: 490, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 22, color: "#fff7fa", background: "linear-gradient(180deg, rgba(4,4,5,.08) 0%, rgba(4,4,5,.52) 36%, rgba(4,4,5,.94) 100%)", backdropFilter: "blur(1.5px)" }}>
+              <div style={{ padding: "16px 15px 14px", border: "1px solid rgba(255,255,255,.16)", borderRadius: 12, background: "rgba(9,8,10,.56)", backdropFilter: "blur(15px) saturate(125%)", boxShadow: "inset 0 1px 0 rgba(255,255,255,.09)" }}>
+              {!eb.photoUrl && <div style={{ width: 50, height: 50, borderRadius: "50%", background: "linear-gradient(135deg, var(--mauve), var(--coral))", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--paper)", fontFamily: "Georgia, serif", fontSize: 18, marginBottom: 12 }}>{(eb.display_name ?? eb.applicant_email)[0]?.toUpperCase()}</div>}
+              <h2 style={{ fontFamily: "Georgia, serif", fontSize: 23, marginBottom: 6, color: "#fff7fa" }}>{eb.display_name ?? "Executive Board"}</h2>
               <div className="mono" style={{ fontSize: 10, color: "var(--coral)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Executive Board profile</div>
               {(() => {
                 const rating = reviewsByEb.get(eb.id);
-                return <p className="mono" style={{ fontSize: 11, color: "rgba(7,7,7,.65)", marginBottom: 10 }}>★ {rating ? (rating.total / rating.count).toFixed(1) : "New"} <span style={{ opacity: .65 }}>· {rating?.count ?? 0} rating{rating?.count === 1 ? "" : "s"}</span></p>;
+                return <p className="mono" style={{ fontSize: 11, color: "rgba(255,247,250,.84)", marginBottom: 10 }}>★ {rating ? (rating.total / rating.count).toFixed(1) : "New"} <span style={{ opacity: .65 }}>· {rating?.count ?? 0} rating{rating?.count === 1 ? "" : "s"}</span></p>;
               })()}
-              <p style={{ fontSize: 13.5, lineHeight: 1.6, marginBottom: 10, color: "rgba(7,7,7,0.75)" }}>{eb.bio}</p>
-              <p className="mono" style={{ fontSize: 11, color: "rgba(7,7,7,0.55)", marginBottom: 10 }}>{eb.experience}</p>
+              <p style={{ fontSize: 13.5, lineHeight: 1.6, marginBottom: 10, color: "rgba(255,247,250,.88)" }}>{eb.bio}</p>
+              <p className="mono" style={{ fontSize: 11, color: "rgba(255,247,250,.68)", marginBottom: 10 }}>{eb.experience}</p>
               {Object.values((eb.remuneration_expectations ?? {}) as Record<string, string>).some(Boolean) && (
-                <p className="mono" style={{ fontSize: 10, color: "rgba(7,7,7,0.52)", marginBottom: 10 }}>
+                <p className="mono" style={{ fontSize: 10, color: "rgba(255,247,250,.65)", marginBottom: 10 }}>
                   {Object.entries((eb.remuneration_expectations ?? {}) as Record<string, string>).filter(([, value]) => value).map(([role, value]) => `${role.replaceAll("_", " ")} · ${value}`).join("  /  ")}
                 </p>
               )}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {eb.areas_of_expertise?.map((a: string) => (
-                  <span key={a} className="mono" style={{ fontSize: 10, border: "1px solid rgba(7,7,7,0.25)", padding: "2px 8px", borderRadius: 20, color: "rgba(7,7,7,0.65)" }}>
+                  <span key={a} className="mono" style={{ fontSize: 10, border: "1px solid rgba(255,255,255,.26)", padding: "2px 8px", borderRadius: 20, color: "rgba(255,247,250,.88)", background: "rgba(0,0,0,.2)" }}>
                     {a}
                   </span>
                 ))}
               </div>
-              {eb.cvUrl && <a href={eb.cvUrl} target="_blank" rel="noreferrer" className="mono" style={{ display:"inline-block", marginTop:14, color:"var(--ink)", fontSize:11, fontWeight:700 }}>View CV / MUN Portfolio ↗</a>}
-              {user && user.id !== eb.applicant_id && <form action={rateEb} style={{ display: "flex", gap: 7, alignItems: "center", marginTop: 14 }}><input type="hidden" name="eb_application_id" value={eb.id} /><select name="rating" defaultValue={reviewsByEb.get(eb.id)?.mine ?? ""} required aria-label={`Rate ${eb.display_name ?? "this EB"}`} style={{ padding: "6px 8px", borderRadius: 4, border: "1px solid rgba(7,7,7,.22)", background: "transparent", fontSize: 11 }}><option value="" disabled>Rate this EB</option><option value="5">★★★★★ · 5</option><option value="4">★★★★ · 4</option><option value="3">★★★ · 3</option><option value="2">★★ · 2</option><option value="1">★ · 1</option></select><button type="submit" className="mono" style={{ background: "transparent", color: "var(--ink)", border: "1px solid rgba(7,7,7,.3)", borderRadius: 4, padding: "7px 9px", fontSize: 10, cursor: "pointer", textTransform: "uppercase" }}>Save</button></form>}
-              <Link href={user ? `/inbox?eb=${eb.id}` : "/login"} className="mono" style={{ display:"inline-block", marginTop:16, background:"var(--ink)", color:"var(--paper)", padding:"9px 12px", borderRadius:4, textDecoration:"none", fontSize:11, textTransform:"uppercase" }}>Message through MUNlocked →</Link>
+              {eb.cvUrl && <a href={eb.cvUrl} target="_blank" rel="noreferrer" className="mono" style={{ display:"inline-block", marginTop:14, color:"#fff7fa", fontSize:11, fontWeight:700 }}>View CV / MUN Portfolio ↗</a>}
+              {user && user.id !== eb.applicant_id && <form action={rateEb} style={{ display: "flex", gap: 7, alignItems: "center", marginTop: 14 }}><input type="hidden" name="eb_application_id" value={eb.id} /><select name="rating" defaultValue={reviewsByEb.get(eb.id)?.mine ?? ""} required aria-label={`Rate ${eb.display_name ?? "this EB"}`} style={{ padding: "6px 8px", borderRadius: 4, border: "1px solid rgba(255,255,255,.3)", background: "rgba(0,0,0,.36)", color: "#fff7fa", fontSize: 11 }}><option value="" disabled>Rate this EB</option><option value="5">★★★★★ · 5</option><option value="4">★★★★ · 4</option><option value="3">★★★ · 3</option><option value="2">★★ · 2</option><option value="1">★ · 1</option></select><button type="submit" className="mono" style={{ background: "rgba(0,0,0,.26)", color: "#fff7fa", border: "1px solid rgba(255,255,255,.3)", borderRadius: 4, padding: "7px 9px", fontSize: 10, cursor: "pointer", textTransform: "uppercase" }}>Save</button></form>}
+              <Link href={user ? `/inbox?eb=${eb.id}` : "/login"} className="mono" style={{ display:"inline-block", marginTop:16, background:"#fff2f6", color:"#181116", padding:"9px 12px", borderRadius:4, textDecoration:"none", fontSize:11, textTransform:"uppercase" }}>Message through MUNlocked →</Link>
+              </div></div>
             </SpotlightCard>
           ))}
         </div>
