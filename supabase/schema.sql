@@ -269,10 +269,19 @@ create table public.eb_applications (
 
 alter table public.eb_applications enable row level security;
 
--- Approved EB profiles are the public "Hire an EB" directory.
-create policy "Approved EB applications are viewable by everyone signed in"
-  on public.eb_applications for select to authenticated
-  using (status = 'approved');
+-- Guests can browse the EB marketplace. Public access is limited to the
+-- explicit safe columns granted below; private applicant email and moderation
+-- fields remain inaccessible outside signed-in workflows.
+create policy "Approved EB applications are publicly viewable"
+  on public.eb_applications for select to anon
+  using (status = 'approved' and removed_at is null);
+
+revoke all privileges on table public.eb_applications from anon;
+grant select (
+  id, applicant_id, display_name, bio, experience, eb_experience,
+  delegate_experience, remuneration_expectations, areas_of_expertise,
+  previous_conferences, photo_path, cv_path, created_at
+) on public.eb_applications to anon;
 
 create policy "Applicants can view their own application"
   on public.eb_applications for select to authenticated
@@ -464,3 +473,29 @@ $$;
 
 revoke all on function public.create_committee_with_defaults(text,text,text,boolean) from public, anon;
 grant execute on function public.create_committee_with_defaults(text,text,text,boolean) to authenticated;
+
+-- Public marketplace media. Only files referenced by an active approved profile
+-- can be read without signing in; uploads remain protected by owner policies.
+create policy "Guests can view approved EB profile photos"
+  on storage.objects for select to anon
+  using (
+    bucket_id = 'eb-profiles'
+    and exists (
+      select 1 from public.eb_applications
+      where eb_applications.status = 'approved'
+        and eb_applications.removed_at is null
+        and eb_applications.photo_path = objects.name
+    )
+  );
+
+create policy "Guests can view approved EB CVs"
+  on storage.objects for select to anon
+  using (
+    bucket_id = 'eb-documents'
+    and exists (
+      select 1 from public.eb_applications
+      where eb_applications.status = 'approved'
+        and eb_applications.removed_at is null
+        and eb_applications.cv_path = objects.name
+    )
+  );

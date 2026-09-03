@@ -7,12 +7,14 @@ import { notifyAdmin } from "@/lib/email";
 export async function loginAction(formData: FormData) {
   const email = String(formData.get("email"));
   const password = String(formData.get("password"));
+  const requestedNext = String(formData.get("next") || "/");
+  const next = requestedNext.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/";
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    redirect(`/login?error=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`);
   }
 
   // Fire-and-forget, deliberately NOT awaited: a slow or failing Resend call
@@ -21,7 +23,7 @@ export async function loginAction(formData: FormData) {
   // part of the auth-critical path.
   notifyAdmin("Successful login", `${email} just logged in to MUNlocked.`).catch(() => {});
 
-  redirect("/");
+  redirect(next);
 }
 
 export async function resendConfirmationAction(formData: FormData) {

@@ -5,7 +5,7 @@ import { loginAction, resendConfirmationAction } from "./actions";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; resent?: string }>;
+  searchParams: Promise<{ error?: string; resent?: string; next?: string }>;
 }) {
   const params = await searchParams;
   const isUnconfirmed = params.error?.toLowerCase().includes("confirm");
@@ -21,6 +21,7 @@ export default async function LoginPage({
       </div>
       <div>
       <form action={loginAction} className="auth-card" style={{ boxShadow: "10px 12px 0 rgba(156,110,130,.24)" }}>
+        <input type="hidden" name="next" value={params.next ?? "/"} />
         <div className="mono" style={{ fontSize: 11, letterSpacing: 2, color: "var(--coral)", marginBottom: 8, textTransform: "uppercase" }}>
           File No. IN/MUN/ACCESS
         </div>

@@ -12,7 +12,7 @@ export default async function HireEbPage({ searchParams }: { searchParams: Promi
 
   const { data: ebs, error } = await supabase
     .from("eb_applications")
-    .select("id, applicant_id, applicant_email, display_name, bio, experience, eb_experience, delegate_experience, remuneration_expectations, areas_of_expertise, previous_conferences, photo_path, cv_path, created_at")
+    .select("id, applicant_id, display_name, bio, experience, eb_experience, delegate_experience, remuneration_expectations, areas_of_expertise, previous_conferences, photo_path, cv_path, created_at")
     .eq("status", "approved")
     .order("created_at", { ascending: false });
 
@@ -91,7 +91,7 @@ export default async function HireEbPage({ searchParams }: { searchParams: Promi
             <SpotlightCard key={eb.id} className="munlocked-card-hover" style={{ minHeight: 490, borderRadius: 16, boxShadow: "5px 6px 0 rgba(156,110,130,0.2)", transition: "transform 0.25s ease, box-shadow 0.25s ease", backgroundColor: "#111012", backgroundImage: eb.photoUrl ? `url("${eb.photoUrl}")` : "linear-gradient(135deg, #6a4351, #161218 70%)", backgroundSize: "cover", backgroundPosition: "center" }}>
               <div style={{ minHeight: 490, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 22, color: "#fff7fa", background: "linear-gradient(180deg, rgba(4,4,5,.08) 0%, rgba(4,4,5,.52) 36%, rgba(4,4,5,.94) 100%)", backdropFilter: "blur(1.5px)" }}>
               <div style={{ padding: "16px 15px 14px", border: "1px solid rgba(255,255,255,.16)", borderRadius: 12, background: "rgba(9,8,10,.56)", backdropFilter: "blur(15px) saturate(125%)", boxShadow: "inset 0 1px 0 rgba(255,255,255,.09)" }}>
-              {!eb.photoUrl && <div style={{ width: 50, height: 50, borderRadius: "50%", background: "linear-gradient(135deg, var(--mauve), var(--coral))", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--paper)", fontFamily: "Georgia, serif", fontSize: 18, marginBottom: 12 }}>{(eb.display_name ?? eb.applicant_email)[0]?.toUpperCase()}</div>}
+              {!eb.photoUrl && <div style={{ width: 50, height: 50, borderRadius: "50%", background: "linear-gradient(135deg, var(--mauve), var(--coral))", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--paper)", fontFamily: "Georgia, serif", fontSize: 18, marginBottom: 12 }}>{(eb.display_name ?? "Executive Board")[0]?.toUpperCase()}</div>}
               <h2 style={{ fontFamily: "Georgia, serif", fontSize: 23, marginBottom: 6, color: "#fff7fa" }}>{eb.display_name ?? "Executive Board"}</h2>
               <div className="mono" style={{ fontSize: 10, color: "var(--coral)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Executive Board profile</div>
               {(() => {
@@ -114,7 +114,7 @@ export default async function HireEbPage({ searchParams }: { searchParams: Promi
               </div>
               {eb.cvUrl && <a href={eb.cvUrl} target="_blank" rel="noreferrer" className="mono" style={{ display:"inline-block", marginTop:14, color:"#fff7fa", fontSize:11, fontWeight:700 }}>View CV / MUN Portfolio ↗</a>}
               {user && user.id !== eb.applicant_id && <form action={rateEb} style={{ display: "flex", gap: 7, alignItems: "center", marginTop: 14 }}><input type="hidden" name="eb_application_id" value={eb.id} /><select name="rating" defaultValue={reviewsByEb.get(eb.id)?.mine ?? ""} required aria-label={`Rate ${eb.display_name ?? "this EB"}`} style={{ padding: "6px 8px", borderRadius: 4, border: "1px solid rgba(255,255,255,.3)", background: "rgba(0,0,0,.36)", color: "#fff7fa", fontSize: 11 }}><option value="" disabled>Rate this EB</option><option value="5">★★★★★ · 5</option><option value="4">★★★★ · 4</option><option value="3">★★★ · 3</option><option value="2">★★ · 2</option><option value="1">★ · 1</option></select><button type="submit" className="mono" style={{ background: "rgba(0,0,0,.26)", color: "#fff7fa", border: "1px solid rgba(255,255,255,.3)", borderRadius: 4, padding: "7px 9px", fontSize: 10, cursor: "pointer", textTransform: "uppercase" }}>Save</button></form>}
-              <Link href={user ? `/inbox?eb=${eb.id}` : "/login"} className="mono" style={{ display:"inline-block", marginTop:16, background:"#fff2f6", color:"#181116", padding:"9px 12px", borderRadius:4, textDecoration:"none", fontSize:11, textTransform:"uppercase" }}>Message through MUNlocked →</Link>
+              <Link href={user ? `/inbox?eb=${eb.id}` : `/login?next=${encodeURIComponent(`/inbox?eb=${eb.id}`)}`} className="mono" style={{ display:"inline-block", marginTop:16, background:"#fff2f6", color:"#181116", padding:"9px 12px", borderRadius:4, textDecoration:"none", fontSize:11, textTransform:"uppercase" }}>{user ? "Message through MUNlocked →" : "Sign in to message →"}</Link>
               </div></div>
             </SpotlightCard>
           ))}
