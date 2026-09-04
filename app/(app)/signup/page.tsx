@@ -15,6 +15,7 @@ export default function SignupPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<(typeof ROLES)[number]["value"]>("delegate");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +70,7 @@ export default function SignupPage() {
         <div className="mono" style={{ fontSize: 11, letterSpacing: 2, color: "var(--coral)", marginBottom: 8, textTransform: "uppercase" }}>
           File No. IN/MUN/ACCESS
         </div>
-        <h1 style={{ fontFamily: "Georgia, serif", fontSize: 26, marginBottom: 6 }}>
+        <h1 style={{ fontFamily: "Georgia, serif", fontSize: 26, marginBottom: 6, color: "var(--mauve)" }}>
           Join MUNlocked
         </h1>
         <p style={{ fontSize: 13, color: "rgba(7,7,7,0.6)", marginBottom: 22 }}>
@@ -111,14 +112,25 @@ export default function SignupPage() {
         />
 
         <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          required
-          minLength={6}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div className="password-field">
+          <input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button
+            type="button"
+            className="password-visibility"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+            onClick={() => setShowPassword((visible) => !visible)}
+          >
+            {showPassword ? "Hide" : "Show"}
+          </button>
+        </div>
 
         <button type="submit" className="submit" disabled={loading}>
           {loading ? "Creating account…" : "Create Account"}

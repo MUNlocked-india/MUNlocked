@@ -13,11 +13,11 @@ export default async function LoginPage({
   return (
     <div className="auth-wrap" style={{ padding: 24 }}>
       <div style={{ width: "100%", maxWidth: 920, display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(320px,420px)", gap: 48, alignItems: "center" }}>
-      <div style={{ color: "var(--ink)" }}>
+      <div style={{ color: "var(--text)" }}>
         <Image src="/logo.png" alt="MUNlocked" width={72} height={65} style={{ objectFit: "contain", marginBottom: 24 }} priority />
         <div className="mono" style={{ fontSize: 11, letterSpacing: 2, color: "var(--mauve)", textTransform: "uppercase", marginBottom: 12 }}>Your next committee starts here</div>
-        <h1 style={{ fontFamily: "Anton, sans-serif", fontWeight: 400, textTransform: "uppercase", fontSize: "clamp(38px,5vw,64px)", lineHeight: .95, marginBottom: 18 }}>Enter the<br />MUNlocked circuit.</h1>
-        <p style={{ maxWidth: 410, fontSize: 15, lineHeight: 1.7, color: "rgba(7,7,7,.68)" }}>Find verified conferences, speak with Executive Boards, build research, and run a committee from one place.</p>
+        <h1 style={{ fontFamily: "Anton, sans-serif", fontWeight: 400, textTransform: "uppercase", fontSize: "clamp(38px,5vw,64px)", lineHeight: .95, marginBottom: 18, color: "var(--coral)" }}>Enter the<br />MUNlocked circuit.</h1>
+        <p style={{ maxWidth: 410, fontSize: 15, lineHeight: 1.7, color: "rgba(244,237,240,.68)" }}>Find verified conferences, speak with Executive Boards, build research, and run a committee from one place.</p>
       </div>
       <div>
       <form action={loginAction} className="auth-card" style={{ boxShadow: "10px 12px 0 rgba(156,110,130,.24)" }}>

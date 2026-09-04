@@ -1,10 +1,16 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { COUNTRY_BUNDLES } from "@/lib/countryBundles";
-import RenameColumnInput from "@/components/RenameColumnInput";
 import SessionTimerDesk from "@/components/SessionTimerDesk";
 import ExportMarksheet from "@/components/ExportMarksheet";
-import { inviteCoChair, addDelegate, addBundle, removeDelegate, updateMarks, addColumn, renameColumn, removeColumn } from "./actions";
+import { inviteCoChair, addDelegate, addBundle, removeDelegate, updateDelegateReview } from "./actions";
+
+const ASSESSMENT_LABELS: Record<string, string> = {
+  not_reviewed: "Not reviewed",
+  engaged: "Engaged",
+  strong: "Strong contribution",
+  standout: "Standout",
+};
 
 export default async function CommitteePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -20,52 +26,33 @@ export default async function CommitteePage({ params }: { params: Promise<{ id: 
 
   if (committeeError || !committee) redirect("/committees");
 
-  const [membersResult, columnsResult, delegatesResult] = await Promise.all([
+  const [membersResult, delegatesResult] = await Promise.all([
     supabase.from("committee_members").select("email, role").eq("committee_id", id),
-    supabase.from("marksheet_columns").select("id, key, label, position").eq("committee_id", id).order("position", { ascending: true }),
     supabase.from("delegates").select("id, country, delegate_name, marks(custom_scores, notes, award)").eq("committee_id", id).order("country", { ascending: true }),
   ]);
 
   const members = membersResult.data ?? [];
-  const cols = columnsResult.data ?? [];
   const delegates = delegatesResult.data ?? [];
-  const columnKeys = cols.map((column) => column.key);
 
   const boundInvite = inviteCoChair.bind(null, id);
   const boundAddDelegate = addDelegate.bind(null, id);
   const boundAddBundle = addBundle.bind(null, id);
   const boundRemove = removeDelegate.bind(null, id);
-  const boundUpdateMarks = updateMarks.bind(null, id, columnKeys);
-  const boundAddColumn = addColumn.bind(null, id);
-  const boundRenameColumn = renameColumn.bind(null, id);
-  const boundRemoveColumn = removeColumn.bind(null, id);
-
-  const totals: Record<string, number> = Object.fromEntries(cols.map((column) => [column.key, 0]));
-  let bestDelegateId: string | null = null;
-  let bestDelegateTotal = -1;
-
-  for (const delegate of delegates) {
+  const reviewedCount = delegates.filter((delegate) => {
     const mark = Array.isArray(delegate.marks) ? delegate.marks[0] : delegate.marks;
-    const scores = (mark?.custom_scores ?? {}) as Record<string, number>;
-    let rowTotal = 0;
-    for (const column of cols) {
-      const value = Number(scores[column.key] ?? 0);
-      totals[column.key] += value;
-      rowTotal += value;
-    }
-    if (rowTotal > bestDelegateTotal) {
-      bestDelegateTotal = rowTotal;
-      bestDelegateId = delegate.id;
-    }
-  }
-
-  const bestDelegate = delegates.find((delegate) => delegate.id === bestDelegateId);
-  const exportHeaders = ["Country", ...cols.map((column) => column.label), "Total", "Notes", "Award"];
+    const review = (mark?.custom_scores ?? {}) as Record<string, unknown>;
+    return review.assessment && review.assessment !== "not_reviewed";
+  }).length;
+  const awardedCount = delegates.filter((delegate) => {
+    const mark = Array.isArray(delegate.marks) ? delegate.marks[0] : delegate.marks;
+    return Boolean(mark?.award);
+  }).length;
+  const exportHeaders = ["Country", "Assessment", "Chair notes", "Award"];
   const exportRows = delegates.map((delegate) => {
     const mark = Array.isArray(delegate.marks) ? delegate.marks[0] : delegate.marks;
-    const scores = (mark?.custom_scores ?? {}) as Record<string, number>;
-    const rowTotal = cols.reduce((sum, column) => sum + Number(scores[column.key] ?? 0), 0);
-    return [delegate.country, ...cols.map((column) => Number(scores[column.key] ?? 0)), rowTotal, mark?.notes ?? "", mark?.award ?? ""];
+    const review = (mark?.custom_scores ?? {}) as Record<string, unknown>;
+    const assessment = typeof review.assessment === "string" ? review.assessment : "not_reviewed";
+    return [delegate.country, ASSESSMENT_LABELS[assessment] ?? ASSESSMENT_LABELS.not_reviewed, mark?.notes ?? "", mark?.award ?? ""];
   });
 
   return (
@@ -78,21 +65,21 @@ export default async function CommitteePage({ params }: { params: Promise<{ id: 
             <h1>{committee.name}</h1>
             <div className="marksheet-meta"><span>{committee.code}</span>{committee.conference_name ? <span>{committee.conference_name}</span> : null}<span>{delegates.length} portfolios</span></div>
           </div>
-          <div className="marksheet-intro-note"><i aria-hidden="true">01</i><p>Run roll call, speakers, motions and scoring from one calm live workspace.</p></div>
+          <div className="marksheet-intro-note"><i aria-hidden="true">01</i><p>Run roll call, speakers, motions and quick chair reviews from one calm live workspace.</p></div>
         </header>
 
         <div className="marksheet-summary">
           <article><span>Portfolios</span><strong>{delegates.length}</strong><p>Live committee roster</p></article>
-          <article><span>Scoring signals</span><strong>{cols.length}</strong><p>Editable grading criteria</p></article>
-          <article className="leader-card"><span>Current lead</span><strong>{bestDelegate?.country ?? "No scores yet"}</strong><p>{bestDelegate ? `${bestDelegateTotal.toFixed(1)} recorded points` : "The board updates as the dais scores"}</p></article>
+          <article><span>Reviewed</span><strong>{reviewedCount}/{delegates.length}</strong><p>Quick chair assessments saved</p></article>
+          <article className="leader-card"><span>Awards selected</span><strong>{awardedCount}</strong><p>Recognition stays a deliberate dais decision</p></article>
         </div>
 
         <SessionTimerDesk delegates={delegates.map(({ id: delegateId, country }) => ({ id: delegateId, country }))} committeeName={committee.name} committeeCode={committee.code} conferenceName={committee.conference_name} />
 
         <section id="marksheet" className="marksheet-record-section">
           <div className="marksheet-section-heading">
-            <div><p>02 · Assessment room</p><h2>The live marksheet</h2></div>
-            <div className="marksheet-heading-copy">Every score, private note and award stays in one shared record for the dais.</div>
+            <div><p>02 · Chair review desk</p><h2>Mark the room, not a spreadsheet.</h2></div>
+            <div className="marksheet-heading-copy">Use one clear assessment, a short private note, and awards only when the dais is ready. No totals to calculate.</div>
           </div>
 
           <div className="marksheet-record-layout">
@@ -109,51 +96,32 @@ export default async function CommitteePage({ params }: { params: Promise<{ id: 
               </details>
 
               <details>
-                <summary><span>Scoring criteria</span><i>+</i></summary>
-                <div className="toolrail-content"><p>Add any conference-specific signal to the default sheet.</p><form action={boundAddColumn} className="toolrail-inline-form"><input type="text" name="label" placeholder="e.g. Position paper" required /><button type="submit">Add</button></form></div>
-              </details>
-
-              <details>
                 <summary><span>Export record</span><i>+</i></summary>
-                <div className="toolrail-content"><p>Download live scores, notes and awards as a clean CSV record.</p><ExportMarksheet fileName={`${committee.code || committee.name}-marksheet`} headers={exportHeaders} rows={exportRows} /></div>
+                <div className="toolrail-content"><p>Download the dais review record with assessments, notes and awards.</p><ExportMarksheet fileName={`${committee.code || committee.name}-chair-review`} headers={exportHeaders} rows={exportRows} /></div>
               </details>
             </aside>
 
             <div className="marksheet-sheet-card">
               <div className="marksheet-sheet-head">
-                <div><span>Live scoring</span><h3>{delegates.length} delegate{delegates.length === 1 ? "" : "s"}</h3></div>
-                {bestDelegate ? <span className="best-delegate-pill">★ Best delegate · {bestDelegate.country}</span> : null}
+                <div><span>Quick review board</span><h3>{delegates.length} delegate{delegates.length === 1 ? "" : "s"}</h3></div>
+                <span className="best-delegate-pill">No points. Just clear chair judgement.</span>
               </div>
 
               {delegates.length === 0 ? <div className="marksheet-empty"><span>＋</span><h3>Your scoring room is ready.</h3><p>Add a country or a quick bundle from the panel beside the sheet.</p></div> : null}
-              {delegates.length > 0 && cols.length === 0 ? <div className="marksheet-empty"><span>＋</span><h3>Add your first criterion.</h3><p>Open “Scoring criteria” and build the sheet your conference needs.</p></div> : null}
-
-              {delegates.length > 0 && cols.length > 0 ? (
-                <div className="marksheet-table-wrap">
-                  <table className="marksheet-table">
-                    <thead><tr><th>Portfolio</th>{cols.map((column) => <th key={column.id}><div className="column-heading"><RenameColumnInput action={boundRenameColumn} columnId={column.id} defaultLabel={column.label} /><form action={boundRemoveColumn}><input type="hidden" name="column_id" value={column.id} /><button type="submit" title="Remove criterion" aria-label={`Remove ${column.label}`}>×</button></form></div></th>)}<th>Total</th><th>Chair notes</th><th>Award</th><th><span className="sr-only">Actions</span></th></tr></thead>
-                    <tbody>
-                      {delegates.map((delegate) => {
-                        const mark = Array.isArray(delegate.marks) ? delegate.marks[0] : delegate.marks;
-                        const scores = (mark?.custom_scores ?? {}) as Record<string, number>;
-                        const rowTotal = cols.reduce((sum, column) => sum + Number(scores[column.key] ?? 0), 0);
-                        const isBest = delegate.id === bestDelegateId;
-                        return (
-                          <tr key={delegate.id} className={isBest ? "is-leading" : ""}>
-                            <td><form action={boundUpdateMarks} id={`form-${delegate.id}`}><input type="hidden" name="delegate_id" value={delegate.id} /></form><span className="portfolio-name">{isBest ? <i>★</i> : null}{delegate.country}</span></td>
-                            {cols.map((column) => <td key={column.id}><input className="score-input" type="number" min={0} step="0.5" name={`col_${column.key}`} form={`form-${delegate.id}`} defaultValue={scores[column.key] ?? 0} aria-label={`${column.label} score for ${delegate.country}`} /></td>)}
-                            <td><strong className="row-total">{rowTotal.toFixed(1)}</strong></td>
-                            <td><input className="notes-input" type="text" name="notes" form={`form-${delegate.id}`} defaultValue={mark?.notes ?? ""} placeholder="Add a note…" aria-label={`Notes for ${delegate.country}`} /></td>
-                            <td><select className="award-select" name="award" form={`form-${delegate.id}`} defaultValue={mark?.award ?? ""} aria-label={`Award for ${delegate.country}`}><option value="">No award</option><option>Best Delegate</option><option>High Commendation</option><option>Special Mention</option><option>Verbal Mention</option></select></td>
-                            <td><div className="row-actions"><button type="submit" form={`form-${delegate.id}`} className="save-score">Save</button><form action={boundRemove}><input type="hidden" name="delegate_id" value={delegate.id} /><button type="submit" className="remove-portfolio" aria-label={`Remove ${delegate.country}`}>×</button></form></div></td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot><tr><td>Column totals</td>{cols.map((column) => <td key={column.id}>{totals[column.key]}</td>)}<td>—</td><td /><td /><td /></tr></tfoot>
-                  </table>
-                </div>
-              ) : null}
+              {delegates.length > 0 ? <div className="delegate-review-grid">{delegates.map((delegate) => {
+                const mark = Array.isArray(delegate.marks) ? delegate.marks[0] : delegate.marks;
+                const review = (mark?.custom_scores ?? {}) as Record<string, unknown>;
+                const assessment = typeof review.assessment === "string" ? review.assessment : "not_reviewed";
+                return <form action={updateDelegateReview.bind(null, id)} className="delegate-review-card" key={delegate.id}>
+                  <input type="hidden" name="delegate_id" value={delegate.id} />
+                  <div className="delegate-review-head"><span>{delegate.country.slice(0, 2).toUpperCase()}</span><div><h3>{delegate.country}</h3><p>{ASSESSMENT_LABELS[assessment] ?? ASSESSMENT_LABELS.not_reviewed}</p></div><button type="submit" className="remove-portfolio" formAction={boundRemove}>×</button></div>
+                  <label htmlFor={`assessment-${delegate.id}`}>Chair assessment</label>
+                  <select id={`assessment-${delegate.id}`} name="assessment" defaultValue={assessment} className="assessment-select"><option value="not_reviewed">Not reviewed yet</option><option value="engaged">Engaged</option><option value="strong">Strong contribution</option><option value="standout">Standout</option></select>
+                  <label htmlFor={`notes-${delegate.id}`}>Private dais note</label>
+                  <textarea id={`notes-${delegate.id}`} name="notes" defaultValue={mark?.notes ?? ""} placeholder="One short reminder for the dais…" rows={2} />
+                  <div className="delegate-review-footer"><select name="award" defaultValue={mark?.award ?? ""} aria-label={`Award for ${delegate.country}`}><option value="">No award selected</option><option>Best Delegate</option><option>High Commendation</option><option>Special Mention</option><option>Verbal Mention</option></select><button type="submit" className="save-score">Save review</button></div>
+                </form>;
+              })}</div> : null}
             </div>
           </div>
         </section>

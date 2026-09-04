@@ -156,3 +156,24 @@ export async function updateMarks(committeeId: string, columnKeys: string[], for
 
   revalidatePath(`/committees/${committeeId}`);
 }
+
+export async function updateDelegateReview(committeeId: string, formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const delegateId = String(formData.get("delegate_id") || "");
+  const assessment = String(formData.get("assessment") || "not_reviewed");
+  const allowedAssessments = new Set(["not_reviewed", "engaged", "strong", "standout"]);
+  if (!delegateId || !allowedAssessments.has(assessment)) return;
+
+  await supabase
+    .from("marks")
+    .update({
+      custom_scores: { assessment },
+      notes: String(formData.get("notes") || "").trim(),
+      award: String(formData.get("award") || ""),
+      updated_by: user.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("delegate_id", delegateId);
+
+  revalidatePath(`/committees/${committeeId}`);
+}

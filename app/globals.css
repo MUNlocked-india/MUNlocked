@@ -116,6 +116,11 @@ input[type="password"] {
   margin-bottom: 16px;
 }
 
+.password-field { position:relative; }
+.password-field input { padding-right:68px; }
+.password-visibility { position:absolute; right:9px; top:12px; border:0; background:transparent; color:var(--mauve); cursor:pointer; font:800 10px var(--font-sans); letter-spacing:.08em; text-transform:uppercase; }
+.password-visibility:hover { color:var(--ink); }
+
 label {
   display: block;
   font-size: 11px;
@@ -377,3 +382,29 @@ button.submit:disabled { opacity: 0.6; cursor: not-allowed; }
 @media(max-width:980px){.session-cockpit-tabs{grid-template-columns:190px 1fr}.session-live-pill{display:none}.session-cockpit-body{grid-template-columns:235px minmax(0,1fr)}.marksheet-record-layout{grid-template-columns:1fr}.marksheet-toolrail{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.marksheet-toolrail details+details{border-top:0;border-left:1px solid var(--ms-line)}.marksheet-toolrail details[open] .toolrail-content{display:block}.marksheet-toolrail .toolrail-content{display:none}.dais-sharing-section{grid-template-columns:1fr}.roll-call-grid{grid-template-columns:1fr}}
 @media(max-width:720px){.marksheet-studio{margin-top:12px;padding:28px 9px 70px}.marksheet-intro,.marksheet-section-heading{grid-template-columns:1fr}.marksheet-intro-note{display:none}.marksheet-summary{grid-template-columns:1fr 1fr}.marksheet-summary .leader-card{grid-column:1/-1}.session-cockpit{border-radius:17px;min-height:0}.session-cockpit-tabs{display:block;padding:11px}.session-cockpit-wordmark{padding:0 2px 9px}.session-cockpit-tabs nav{display:flex;overflow-x:auto;height:auto;border-top:1px solid var(--ms-line)}.session-cockpit-tabs nav button{flex:0 0 auto;min-width:102px;height:43px}.session-cockpit-body{grid-template-columns:1fr}.session-roster{max-height:285px}.session-roster-head{padding:14px}.session-roster-list{max-height:150px}.session-stage,.speaker-stage,.roll-call-panel,.motions-panel{min-height:570px}.speaker-stage{padding:42px 16px 142px}.speaker-progress{width:88%}.speaker-controls{flex-wrap:wrap}.session-country{min-height:43px}.marksheet-toolrail{display:block}.marksheet-toolrail details+details{border-left:0;border-top:1px solid var(--ms-line)}.marksheet-toolrail .toolrail-content{display:block}.dais-invite-form>div{grid-template-columns:1fr}.dais-invite-form button{min-height:41px}}
 @media(prefers-reduced-motion:reduce){.marksheet-studio-glow,.session-live-pill i,.speaker-time.is-finished,.caucus-time.is-finished{animation:none!important}}
+
+/* Dark, low-friction chair review desk */
+.marksheet-studio { --ms-ink:#f7edf1; --ms-muted:rgba(247,237,241,.62); --ms-paper:#151116; --ms-cream:#19151a; --ms-blush:rgba(226,160,175,.13); --ms-rose:#e2a0af; --ms-plum:#f3e7eb; --ms-line:rgba(244,237,240,.14); background:radial-gradient(circle at 12% 0,rgba(169,117,140,.23),transparent 30rem),radial-gradient(circle at 90% 12%,rgba(217,189,122,.09),transparent 28rem),linear-gradient(145deg,#0b0a0d,#151117 55%,#0c0b0e); }
+.marksheet-studio::before { opacity:.45; background-image:linear-gradient(rgba(244,237,240,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(244,237,240,.035) 1px,transparent 1px); }
+.marksheet-studio-glow { background:radial-gradient(circle,rgba(226,160,175,.16),transparent 68%); }
+.marksheet-meta span,.marksheet-intro-note,.marksheet-summary article,.marksheet-toolrail,.marksheet-sheet-card,.dais-sharing-card { background:rgba(24,20,26,.68); box-shadow:0 18px 54px rgba(0,0,0,.2); }
+.marksheet-intro-note i { background:linear-gradient(145deg,var(--coral),var(--mauve)); color:var(--ink); }
+.marksheet-summary .leader-card { background:linear-gradient(115deg,rgba(226,160,175,.2),rgba(217,189,122,.1)); }
+.session-cockpit { border-color:rgba(244,237,240,.16); background:#151116; box-shadow:0 34px 100px rgba(0,0,0,.38); }
+.session-cockpit-tabs,.speaker-dock { background:rgba(18,15,20,.92); }
+.session-cockpit-wordmark { color:var(--text); }.session-cockpit-gavel { background:var(--coral); color:var(--ink); }
+.session-cockpit-tabs nav button { color:rgba(244,237,240,.58); }.session-cockpit-tabs nav button:hover,.session-cockpit-tabs nav button.is-active { color:var(--text); background:rgba(226,160,175,.12); }
+.session-stage { background:radial-gradient(circle at 50% 15%,rgba(226,160,175,.12),transparent 31rem),#121014; }.session-stage::before { background-image:linear-gradient(rgba(244,237,240,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(244,237,240,.025) 1px,transparent 1px); }
+.speaker-identity strong,.speaker-time,.caucus-time,.roll-call-panel h2,.motions-panel h2,.no-speaker h2 { color:var(--ms-ink); }
+.secondary-control,.duration-row button,.caucus-presets button,.speaker-queue button,.roll-call-actions button,.roll-call-grid>button { border-color:var(--ms-line); background:rgba(255,255,255,.06); color:var(--ms-ink); }
+.primary-control,.roll-call-actions button:first-child { background:var(--paper); color:var(--ink); }.reply-chip { background:rgba(226,160,175,.12); color:#f3c8d2; }
+.marksheet-toolrail summary,.marksheet-sheet-head h3,.dais-members strong { color:var(--ms-ink); }.toolrail-content>p,.marksheet-heading-copy,.dais-sharing-copy>span { color:var(--ms-muted); }
+.bundle-grid button { border-color:rgba(244,237,240,.13); background:rgba(244,237,240,.06); color:rgba(244,237,240,.78); }.bundle-grid button:hover { background:rgba(226,160,175,.15); }
+.marksheet-studio .toolrail-inline-form input,.marksheet-studio .dais-invite-form input { border-color:var(--ms-line); background:rgba(0,0,0,.22); color:var(--ms-ink); }
+.marksheet-sheet-head { background:linear-gradient(100deg,rgba(244,237,240,.07),rgba(226,160,175,.08)); }.marksheet-sheet-head span:first-child { color:var(--coral); }.best-delegate-pill { border-color:rgba(226,160,175,.3); background:rgba(226,160,175,.11); color:#f5d4dc!important; }
+.delegate-review-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:12px; padding:14px; }
+.delegate-review-card { display:flex; flex-direction:column; gap:8px; min-height:270px; padding:15px; border:1px solid var(--ms-line); border-radius:15px; background:linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.025)); transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease; }.delegate-review-card:hover { transform:translateY(-3px); border-color:rgba(226,160,175,.48); box-shadow:0 14px 34px rgba(0,0,0,.2); }
+.delegate-review-head { display:flex; align-items:center; gap:10px; margin-bottom:4px; }.delegate-review-head>span { display:grid; place-items:center; width:38px; height:38px; border-radius:11px; background:linear-gradient(145deg,var(--paper),var(--coral)); color:var(--ink); font:800 10px var(--font-sans); }.delegate-review-head>div { min-width:0; flex:1; }.delegate-review-head h3 { overflow:hidden; margin:0; color:var(--ms-ink); font:750 16px var(--font-display); text-overflow:ellipsis; white-space:nowrap; }.delegate-review-head p { margin:3px 0 0; color:var(--coral); font:700 9px var(--font-sans); letter-spacing:.07em; text-transform:uppercase; }
+.delegate-review-card label { margin-top:3px; color:rgba(244,237,240,.56); font:700 9px var(--font-sans); letter-spacing:.1em; }.delegate-review-card select,.delegate-review-card textarea { width:100%; border:1px solid var(--ms-line); border-radius:9px; background:rgba(0,0,0,.18); color:var(--ms-ink); font:600 11px var(--font-sans); outline:none; }.delegate-review-card select { min-height:36px; padding:0 10px; }.delegate-review-card textarea { padding:9px 10px; resize:vertical; line-height:1.4; }.delegate-review-card select:focus,.delegate-review-card textarea:focus { border-color:var(--coral); box-shadow:0 0 0 3px rgba(226,160,175,.1); }
+.delegate-review-footer { display:flex; gap:7px; align-items:center; margin-top:auto; }.delegate-review-footer select { min-width:0; flex:1; }.save-score { padding:10px 11px; border:0; background:var(--paper); color:var(--ink); }.remove-portfolio { flex:0 0 auto; border-color:rgba(226,160,175,.28); background:rgba(226,160,175,.08); color:#f3bbc8; }
+@media(max-width:720px){.delegate-review-grid{grid-template-columns:1fr;padding:10px}.marksheet-summary{grid-template-columns:1fr}.marksheet-summary .leader-card{grid-column:auto}}
